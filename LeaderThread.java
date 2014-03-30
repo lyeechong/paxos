@@ -11,4 +11,9 @@ public class LeaderThread implements Runnable
     {
         //TODO leader logic
     }
+    
+    private void sendHeartBeat()
+    {
+        
+    }
 }
