@@ -4,10 +4,14 @@ import thread
 import time
 
 def print_time(threadName, delay):
+  global test
+  test = 0
   count = 0
   while count < 5:
     time.sleep(delay)
     count += 1
+    test += 1
+    print test
     print "%s: %s" % (threadName, time.ctime(time.time()))
     
 try:
