@@ -4,6 +4,7 @@ import fileinput
 import string
 from Client import start_client
 from Server import start_server
+from Constants import CONST
 
 if __name__ == "__main__":
     nodes, clients, = [], []
@@ -37,6 +38,7 @@ if __name__ == "__main__":
             for i in range(num_clients):
               p = mp.Process(target = start_client, args = (i, client_in[i], client_out, server_out, master_out,))
               clients.append(p)
+              client_out[i].send("sup"+str(i))
               p.start()
               #client_out[i].send("Sup"+str(i))
               #try:
@@ -53,10 +55,13 @@ if __name__ == "__main__":
             message = string.join(line[2::])
             """ Instruct the client specified by client_index to send the message
                 to the proper paxos node """
+            print "client:", client_index, "sending:", message
+            client_out[client_index].send((CONST.MASTER, message))
         if line[0] == 'printChatLog':
             client_index = int(line[1])
             """ Print out the client specified by client_index's chat history
                 in the format described on the handout """
+            print "client:", client_index, "printChatLog"
         if line[0] == 'allClear':
             """ Ensure that this blocks until all messages that are going to 
                 come to consensus in PAXOS do, and that all clients have heard
@@ -70,8 +75,10 @@ if __name__ == "__main__":
         if line[0] == 'skipSlots':
             amount_to_skip = int(line[1])
             """ Instruct the leader to skip slots in the chat message sequence """
+            print "skipSlots", amount_to_skip
         if line[0] == 'timeBombLeader':
             num_messages = int(line[1])
             """ Instruct the leader to crash after sending the number of paxos
                 related messages specified by num_messages """
+            print 'timeBombLeader', num_messages
 
