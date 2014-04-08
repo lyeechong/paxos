@@ -24,21 +24,23 @@ s.listen(10)
 print 'Socket now listening'
 
 counter = 0
- 
 #Function for handling connections. This will be used to create threads
 def clientthread(conn):
     #Sending message to connected client
     conn.send('Welcome to the server. Type something and hit enter\n') #send only takes string
      
     #infinite loop so that function do not terminate and thread do not end.
+    global counter
     while True:
          
         #Receiving from client
         data = conn.recv(1024)
         reply = 'OK...' + data
+        print data
+        counter += 1
         if not data:
             break
-        conn.sendall(reply)
+        conn.sendall(str(counter)+reply)
      
     #came out of loop
     conn.close()

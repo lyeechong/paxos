@@ -1,12 +1,22 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import socket
+import sys
 
-s = socket.socket()
-host = socket.gethostname()
-port = 12345
+host = ''
+port = 8888
+size = 1024
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host,port))
+print s.recv(size)
 
-s.connect((host, port))
-s.send('hi there')
-print s.recv(1024)
-s.close
+while 1:
+    # read from keyboard
+    line = sys.stdin.readline().rstrip()
+    print line
+    if line == "hello" or len(line) < 1:
+      break
+    s.send(line)
+    data = s.recv(size)
+    print data
+s.close() 
