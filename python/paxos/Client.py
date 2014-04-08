@@ -9,7 +9,7 @@ class Client():
     self.master_out = master_out
 
   def run(self):
-    print "hello"
+    print "hello from client", self.index
     while True:
       message = self.conn.recv()
       print message

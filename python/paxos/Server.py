@@ -8,10 +8,10 @@ class Server():
     self.server_out = servers_out
     self.master_out = master_out
 
-  def run():
-    print "hello"
+  def run(self):
+    print "hello from server", self.index
 
 def start_server(client_index, pipe_in, clients_out, servers_out, master):
-  my_server = new Client(client_index, pipe_in, clienst_out, servers_out, master)
+  my_server = Server(client_index, pipe_in, clients_out, servers_out, master)
   my_server.run()
 

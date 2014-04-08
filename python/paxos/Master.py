@@ -3,6 +3,7 @@ import multiprocessing as mp
 import fileinput
 import string
 from Client import start_client
+from Server import start_server
 
 if __name__ == "__main__":
     nodes, clients, = [], []
@@ -37,11 +38,15 @@ if __name__ == "__main__":
               p = mp.Process(target = start_client, args = (i, client_in[i], client_out, server_out, master_out,))
               clients.append(p)
               p.start()
-              client_out[i].send("Sup"+str(i))
-              try:
-                print master_in.recv()
-              except EOFError:
-                print "nothing happened"
+              #client_out[i].send("Sup"+str(i))
+              #try:
+              #  print master_in.recv()
+              #except EOFError:
+              #  print "nothing happened"
+            for i in range(num_nodes):
+              p = mp.Process( target = start_server, args = (i, server_in[i], client_out, server_out, master_out,))
+              nodes.append(p)
+              p.start()
               
         if line[0] == 'sendMessage':
             client_index = int(line[1])
