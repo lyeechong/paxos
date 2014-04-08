@@ -16,12 +16,15 @@ class _Const(object):
   @constant
   def HEARTBEAT():
     return "HEARTBEAT_CONSTANT"
-  @consant
+  @constant
   def LEADER_HEARTBEAT_TIME():
     return -12345
   @constant
   def SEND():
     return "SEND_CONSTANT"
+  @constant
+  def PRINT_CHAT_LOG():
+    return "PRINT_CHAT_LOG_CONSTANT"
 
 CONST = _Const()
 
