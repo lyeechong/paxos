@@ -83,6 +83,11 @@ if __name__ == "__main__":
             if not currentNode.is_alive():
               p = mp.Process( target = start_server, args = (node_index, server_in[node_index], client_out, server_out, master_out,))
               nodes[node_index] = p
+
+              #clear out the pipe
+              while server_in[node_index].poll():
+                server_in[node_index].recv()
+
               p.start()
               #block until it is alive
               while not currentNode.is_alive():
