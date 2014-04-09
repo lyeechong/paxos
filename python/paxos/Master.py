@@ -53,7 +53,7 @@ if __name__ == "__main__":
             """ Instruct the client specified by client_index to send the message
                 to the proper paxos node """
             print "client:", client_index, "sending:", message
-            client_out[client_index].send((CONST.MASTER, message))
+            client_out[client_index].send((CONST.MASTER, CONST.SEND, message))
 
         if line[0] == 'printChatLog':
             client_index = int(line[1])
@@ -65,6 +65,8 @@ if __name__ == "__main__":
             """ Ensure that this blocks until all messages that are going to 
                 come to consensus in PAXOS do, and that all clients have heard
                 of them """
+            print "allClear"
+            clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.ALL_CLEAR))
         if line[0] == 'crashServer':
             node_index = int(line[1])
             """ Immediately crash the server specified by node_index """
@@ -99,9 +101,11 @@ if __name__ == "__main__":
             amount_to_skip = int(line[1])
             """ Instruct the leader to skip slots in the chat message sequence """
             print "skipSlots", amount_to_skip
+            clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.SKIP_SLOTS))
         if line[0] == 'timeBombLeader':
             num_messages = int(line[1])
             """ Instruct the leader to crash after sending the number of paxos
                 related messages specified by num_messages """
             print 'timeBombLeader', num_messages
+            clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER))
   

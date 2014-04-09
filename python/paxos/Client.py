@@ -15,9 +15,10 @@ class Client():
     #self.leader = [0, CONST.LEADER_HEARTBEAT_TIME] #(leader_index [initially 0], last heartbeattime)
     self.leader_index = 0
     self.leader_time = currentTimeMillis()
+    self.LC = 0
 
   def check_leader_and_modify(self):
-    if self.leader_time != CONST.LEADER_HEARTBEAT_TIME and currentTimeMillis() - self.leader_time > 500: #More than half a second
+    if self.leader_time != CONST.LEADER_HEARTBEAT_TIME and currentTimeMillis() - self.leader_time > CONST.LEADER_TIMEOUT: #More than half a second
       self.leader_index = (self.leader_index+1)%len(self.server_out)
       self.leader_time = currentTimeMillis()
       self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
@@ -32,11 +33,25 @@ class Client():
     
 
   def master_command(self, commands):
-    if commands[0] == CONST.SEND:
+    #commands = (command, args..)
+    current = commands[0]
+    if current == CONST.SEND:
       message = commands[1]
-      self.server_out[self.leader_index].send((CONST.SEND, self.index, message))
-    elif commands[0] == CONST.PRINT_CHAT_LOG:
+      tag = (self.index, self.LC)
+      self.server_out[self.leader_index].send((CONST.SEND, tag, message))
+    elif current == CONST.PRINT_CHAT_LOG:
       print "client", self.index, "print chat"
+    elif current == CONST.SKIP_SLOTS:
+      #send skip slots to master
+      pass
+    elif current == CONST.ALL_CLEAR:
+      #all_clear
+      pass
+    elif current == CONST.TIME_BOMB_LEADER:
+      #time_bomb_leader
+      pass
+    else:
+      print "Not the right command"
 
   def run(self):
     print "hello from client", self.index
@@ -45,8 +60,10 @@ class Client():
       if self.conn.poll():
         message = self.conn.recv()
         if message[0] == CONST.MASTER:
+          #(MASTER, ...)
           self.master_command(message[1:])
         elif message[0] == CONST.HEARTBEAT:
+          #(CONST.HEARTBEAT, leader_index)
           self.update_leader_alive(message[1])
 
       self.check_leader_and_modify()
