@@ -25,6 +25,10 @@ class _Const(object):
   @constant
   def PRINT_CHAT_LOG():
     return "PRINT_CHAT_LOG_CONSTANT"
+  
+  @constant
+  def ASSIGN_LEADER():
+    return "ASSIGN_LEADER_CONSTANT"
 
 CONST = _Const()
 

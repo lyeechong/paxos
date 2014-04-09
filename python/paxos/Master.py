@@ -35,20 +35,17 @@ if __name__ == "__main__":
               server_in.append(sin)
 
             master_out, master_in = mp.Pipe()
+
             for i in range(num_clients):
               p = mp.Process(target = start_client, args = (i, client_in[i], client_out, server_out, master_out,))
               clients.append(p)
-              client_out[i].send("sup"+str(i))
               p.start()
-              #client_out[i].send("Sup"+str(i))
-              #try:
-              #  print master_in.recv()
-              #except EOFError:
-              #  print "nothing happened"
+
             for i in range(num_nodes):
               p = mp.Process( target = start_server, args = (i, server_in[i], client_out, server_out, master_out,))
               nodes.append(p)
               p.start()
+
               
         if line[0] == 'sendMessage':
             client_index = int(line[1])
@@ -57,11 +54,13 @@ if __name__ == "__main__":
                 to the proper paxos node """
             print "client:", client_index, "sending:", message
             client_out[client_index].send((CONST.MASTER, message))
+
         if line[0] == 'printChatLog':
             client_index = int(line[1])
             """ Print out the client specified by client_index's chat history
                 in the format described on the handout """
             print "client:", client_index, "printChatLog"
+
         if line[0] == 'allClear':
             """ Ensure that this blocks until all messages that are going to 
                 come to consensus in PAXOS do, and that all clients have heard
@@ -69,9 +68,28 @@ if __name__ == "__main__":
         if line[0] == 'crashServer':
             node_index = int(line[1])
             """ Immediately crash the server specified by node_index """
+            print "crashing server", node_index
+            currentNode = nodes[node_index]
+            if currentNode.is_alive():
+              currentNode.terminate()
+            #block until it is dead
+            while currentNode.is_alive():
+              continue
         if line[0] == 'restartServer':
             node_index = int(line[1])
             """ Restart the server specified by node_index """
+            print "restarting server", node_index
+            currentNode = nodes[node_index]
+            if not currentNode.is_alive():
+              p = mp.Process( target = start_server, args = (node_index, server_in[node_index], client_out, server_out, master_out,))
+              nodes[node_index] = p
+              p.start()
+              #block until it is alive
+              while not currentNode.is_alive():
+                continue
+            else:
+              print "node ", node_index, "is still alive"
+              
         if line[0] == 'skipSlots':
             amount_to_skip = int(line[1])
             """ Instruct the leader to skip slots in the chat message sequence """
@@ -81,4 +99,4 @@ if __name__ == "__main__":
             """ Instruct the leader to crash after sending the number of paxos
                 related messages specified by num_messages """
             print 'timeBombLeader', num_messages
-
+  

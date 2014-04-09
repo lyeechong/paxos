@@ -13,32 +13,34 @@ class Client():
     self.server_out = servers_out
     self.master_out = master_out
     #self.leader = [0, CONST.LEADER_HEARTBEAT_TIME] #(leader_index [initially 0], last heartbeattime)
-    self.leader = [0, 0]
+    self.leader_index = 0
+    self.leader_time = currentTimeMillis()
 
   def check_leader_and_modify(self):
-    if self.leader[1] != CONST.LEADER_HEARTBEAT_TIME and currentTimeMillis() - self.leader[1] > 500: #More than half a second
-      self.leader[0] = (self.leader[0]+1)%len(self.server_out)
-      self.leader[1] = currentTimeMillis()
+    if self.leader_time != CONST.LEADER_HEARTBEAT_TIME and currentTimeMillis() - self.leader_time > 500: #More than half a second
+      self.leader_index = (self.leader_index+1)%len(self.server_out)
+      self.leader_time = currentTimeMillis()
+      self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
       print "changing leader"
       #possibly tell everyone else?
 
   def update_leader_alive(self, leader_index):
-    print "updating leader"
-    if leader_index != self.leader[0]:
-      print "client", self.index, "got heartbeat from" ,leader_index, "but thinks that", self.leader_index[1], "is the leader"
+    if leader_index != self.leader_index:
+      print "client", self.index, "got heartbeat from" ,leader_index, "but thinks that", self.leader_index, "is the leader"
     else:
-      self.leader[1] = currentTimeMillis()
+      self.leader_time = currentTimeMillis()
     
 
   def master_command(self, commands):
     if commands[0] == CONST.SEND:
       message = commands[1]
-      self.server_out[self.leader[0]].send((CONST.SEND, self.index, message))
+      self.server_out[self.leader_index].send((CONST.SEND, self.index, message))
     elif commands[0] == CONST.PRINT_CHAT_LOG:
       print "client", self.index, "print chat"
 
   def run(self):
     print "hello from client", self.index
+    self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
     while True:
       if self.conn.poll():
         message = self.conn.recv()
