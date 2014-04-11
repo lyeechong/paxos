@@ -34,6 +34,21 @@ class _Const(object):
   def NACK():
     return "NACK_CONSTANT_456"
 
+  ### PROPOSER CONSTANTS ###
+  @constant
+  def CLIENT_TAG():
+    return "CLIENT_TAG_CONSTANT"
+  @constant
+  def MESSAGE():
+    return "MESSAGE_CONSTANT"
+  @constant
+  def PREP_ACCEPT():
+    return "PREP_ACCEPT_CONSTANT"
+  @constant
+  def PREP_RESPONSE():
+    return "PREP_RESPONSE_CONSTANT"
+  
+
   ### CLIENT CONSTANTS ###
   @constant
   def LEADER_HEARTBEAT_TIME():

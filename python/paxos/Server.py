@@ -42,15 +42,15 @@ class Server():
     self.messageQueue.put(tagged_message)
 
   def start_paxos(self, tagged_message):
-    client_tag = tagged_message[0]
+    _client_tag = tagged_message[0]
     msg = tagged_message[1]
-    print client_tag, msg, "hi", self.is_paxosing
+    print _client_tag, msg, "hi", self.is_paxosing
     ballot = self.get_ballot_num()
     server_tag = (self.index, ballot)
-    self.proposals[server_tag] =  {client_tag = client_tag,
-                                   message = msg
-                                   prep_accept = set(),
-                                   prep_response = set()}
+    self.proposals[server_tag] =  {CONST.CLIENT_TAG: _client_tag,
+                                    CONST.MESSAGE: msg,
+                                    CONST.PREP_ACCEPT: set(),
+                                    CONST.PREP_RESPONSE: set()}
     #PREPARE()
     self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, server_tag))
   
@@ -61,14 +61,16 @@ class Server():
 
   def from_proposer(self, args):
     command = args[0]
+    print args
     if command == CONST.PREPARE:
-      (server_index, ballot) = args[1]
+      server_tag = args[1]
+      (server_index, ballot) = server_tag
       msg = ()
       if ballot > self.current_max_ballot:
         self.current_max_ballot = ballot
-        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index)
+        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index, server_tag)
       else:
-        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index)
+        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index, server_tag)
       self.send_server(server_index, msg)
 
   def from_acceptor(self, args):
@@ -77,10 +79,11 @@ class Server():
     if command == CONST.PREPARE:
       response = args[1]
       accept_index = args[2]
-      self.prep_response.add(accept_index)
+      server_tag = args[3]
+      self.proposals[server_tag][CONST.PREP_RESPONSE].add(accept_index)
       if response == CONST.ACK:
-        self.prep_accept.add(accept_index)
-      if len(self.prep_accept) > self.num_nodes/2:
+        self.proposals[server_tag][CONST.PREP_ACCEPT].add(accept_index)
+      if len(self.proposals[server_tag][CONST.PREP_ACCEPT]) > self.num_nodes/2:
         print "yay we got all the promises!"
 
   def run(self):
