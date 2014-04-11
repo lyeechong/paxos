@@ -17,6 +17,23 @@ class _Const(object):
   def DIST_CLIENT_INDEX():
     return 0
 
+  ### SERVER CONSTANTS ###
+  @constant
+  def PROPOSER():
+    return "PROPOSER_CONSTANT_123"
+  @constant
+  def ACCEPTOR():
+    return "ACCEPTOR_CONSTANT_123"
+  @constant
+  def LEARNER():
+    return "LEARNER_CONSTANT_123"
+  @constant
+  def ACK():
+    return "ACK_CONSTANT_123"
+  @constant
+  def NACK():
+    return "NACK_CONSTANT_456"
+
   ### CLIENT CONSTANTS ###
   @constant
   def LEADER_HEARTBEAT_TIME():
@@ -53,8 +70,16 @@ class _Const(object):
     return "HEARTBEAT_CONSTANT"
 
   ### SERVER TO SERVER ###
+  @constant
+  def PREPARE():
+    return "PREPARE_CONSTANT"
+  @constant
+  def PROMISE():
+    return "PROMISE_CONSTANT"
+  @constant
   def PROPOSE():
     return "PROPOSE_CONSTANT"
+
 
 CONST = _Const()
 

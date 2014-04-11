@@ -11,42 +11,102 @@ class Server():
     self.server_out = servers_out
     self.master_out = master_out
     self.is_leader = False
+    self.num_nodes = len(servers_out)
 
-    self.LC = 0
     self.is_paxosing = False
     self.messageQueue = Queue.Queue()
+
+    self.ballot_num = 0
+    self.proposals = {}
+    self.prep_accept = set()
+    self.prep_response = set()
+
+    self.current_max_ballot = -1
+    self.learned_messages = {}
+
+  # we can use this to take care of time bombs
+  def send_server(self, server_index, message):
+    self.server_out[server_index].send(message)
 
   def broadcast_clients(self, message):
     for c_out in self.client_out:
       c_out.send(message)
 
   def broadcast_servers(self, message):
-    for i in len(self.server_out):
-      if i != self.index:
-        self.server_out[i].send(message)
+    for i in range(len(self.server_out)):
+      self.send_server(i, message)
 
   def queueMessage(self, tag, message):
     #tag = (client_index, client_LC)
     tagged_message = (tag, message)
     self.messageQueue.put(tagged_message)
 
+  def start_paxos(self, tagged_message):
+    client_tag = tagged_message[0]
+    msg = tagged_message[1]
+    print client_tag, msg, "hi", self.is_paxosing
+    ballot = self.get_ballot_num()
+    server_tag = (self.index, ballot)
+    self.proposals[server_tag] =  {client_tag = client_tag,
+                                   message = msg
+                                   prep_accept = set(),
+                                   prep_response = set()}
+    #PREPARE()
+    self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, server_tag))
+  
+  def get_ballot_num(self):
+    ret_num = self.ballot_num
+    self.ballot_num += 1
+    return ret_num
+
+  def from_proposer(self, args):
+    command = args[0]
+    if command == CONST.PREPARE:
+      (server_index, ballot) = args[1]
+      msg = ()
+      if ballot > self.current_max_ballot:
+        self.current_max_ballot = ballot
+        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index)
+      else:
+        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index)
+      self.send_server(server_index, msg)
+
+  def from_acceptor(self, args):
+    print "from"
+    command = args[0]
+    if command == CONST.PREPARE:
+      response = args[1]
+      accept_index = args[2]
+      self.prep_response.add(accept_index)
+      if response == CONST.ACK:
+        self.prep_accept.add(accept_index)
+      if len(self.prep_accept) > self.num_nodes/2:
+        print "yay we got all the promises!"
+
   def run(self):
     print "hello from server", self.index
+    self.master_out.send(("S", self.index)) # ack the master
     while True:
       if self.conn.poll():
         message = self.conn.recv()
         if message[0] == CONST.ASSIGN_LEADER:
           self.is_leader = True
-        if message[0] == CONST.SEND:
+        elif message[0] == CONST.SEND:
           #(CONST.SEND, tag, message)
           self.queueMessage(message[1], message[2])
+
+        elif message[0] == CONST.PROPOSER:
+          self.from_proposer(message[1:])
+        elif message[0] == CONST.ACCEPTOR:
+          self.from_acceptor(message[1:])
 
       if self.is_leader:
         self.broadcast_clients((CONST.HEARTBEAT, self.index))
       
       if not self.is_paxosing and not self.messageQueue.empty():
         message_to_propose = self.messageQueue.get()
-        print message_to_propose
+        self.is_paxosing = True
+        self.start_paxos(message_to_propose)
 
 def start_server(client_index, pipe_in, clients_out, servers_out, master):
   my_server = Server(client_index, pipe_in, clients_out, servers_out, master)

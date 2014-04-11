@@ -45,6 +45,19 @@ if __name__ == "__main__":
               p = mp.Process( target = start_server, args = (i, server_in[i], client_out, server_out, master_out,))
               nodes.append(p)
               p.start()
+            
+            server_ack = set()
+            client_ack = set()
+            # Wait for Acks from servers and clients starting
+            while True:
+              if master_in.poll():
+                message = master_in.recv()
+                if message[0] == "S":
+                  server_ack.add(message[1])
+                elif message[0] == "C":
+                  client_ack.add(message[1])
+              if len(server_ack) == num_nodes and len(client_ack) == num_clients:
+                break
 
               
         if line[0] == 'sendMessage':
@@ -89,7 +102,7 @@ if __name__ == "__main__":
               #clear out the pipe
               while server_in[node_index].poll():
                 server_in[node_index].recv()
-
+              server_out[node_index].send(CONST.MASTER, CONST.RESTART)
               p.start()
               #block until it is alive
               while not currentNode.is_alive():

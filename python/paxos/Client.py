@@ -55,7 +55,8 @@ class Client():
 
   def run(self):
     print "hello from client", self.index
-    self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
+    self.master_out.send(("C", self.index)) #ack the master
+    self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,)) #tell the leader he's the leader
     while True:
       if self.conn.poll():
         message = self.conn.recv()

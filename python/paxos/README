@@ -1,0 +1,9 @@
+MASTER TO CLIENT:
+sendMessage - (MASTER, SEND, msg)
+allClear - (MASTER, ALL_CLEAR)
+timeBombLeader - (MASTER, TIME_BOMB_LEADER, numMsgs)
+skipSlots - (MASTER, SKIP_SLOTS)
+printChatLog - (MASTER, PRINT_CHAT_LOG)
+
+CLIENT TO SERVER:
+sendMessage - (SEND, tag = <client_index, client_LC> , msg)
