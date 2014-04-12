@@ -2,6 +2,7 @@
 import multiprocessing as mp
 import fileinput
 import string
+import time
 from Client import start_client
 from Server import start_server
 from Constants import CONST
@@ -83,13 +84,17 @@ if __name__ == "__main__":
         if line[0] == 'crashServer':
             node_index = int(line[1])
             """ Immediately crash the server specified by node_index """
-            print "crashing server", node_index
             currentNode = nodes[node_index]
+            print "crashing server", node_index
             if currentNode.is_alive():
               currentNode.terminate()
-            #block until it is dead
-            while currentNode.is_alive():
-              continue
+              #block until it is dead
+              while currentNode.is_alive():
+                pass
+              print "we crashed server", node_index
+            else:
+              print node_index, "already_dead"
+            time.sleep(.25)
         if line[0] == 'restartServer':
             node_index = int(line[1])
             """ Restart the server specified by node_index """
@@ -100,13 +105,14 @@ if __name__ == "__main__":
               nodes[node_index] = p
 
               #clear out the pipe
-              while server_in[node_index].poll():
-                server_in[node_index].recv()
-              server_out[node_index].send(CONST.MASTER, CONST.RESTART)
+              #while server_in[node_index].poll():
+              #  server_in[node_index].recv()
+#              server_out[node_index].send(CONST.MASTER, CONST.RESTART)
               p.start()
               #block until it is alive
-              while not currentNode.is_alive():
-                continue
+              while not p.is_alive():
+                pass
+              time.sleep(.25)
             else:
               print "node ", node_index, "is still alive"
               

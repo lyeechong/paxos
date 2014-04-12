@@ -17,17 +17,25 @@ class Client():
     self.leader_time = currentTimeMillis()
     self.LC = 0
 
+    self.messages = []
+
   def check_leader_and_modify(self):
-    if self.leader_time != CONST.LEADER_HEARTBEAT_TIME and currentTimeMillis() - self.leader_time > CONST.LEADER_TIMEOUT: #More than half a second
+    dTime = currentTimeMillis() - self.leader_time
+    if dTime > CONST.TIMEOUT: #More than half a second
       self.leader_index = (self.leader_index+1)%len(self.server_out)
-      self.leader_time = currentTimeMillis()
       self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
-      print "changing leader"
+      self.leader_time = currentTimeMillis()
+      print self.index, "chagning leader to", self.leader_index
+      for tag, msg in self.messages:
+        self.server_out[self.leader_index].send((CONST.SEND, tag, msg))
       #possibly tell everyone else?
 
   def update_leader_alive(self, leader_index):
     if leader_index != self.leader_index:
-      print "client", self.index, "got heartbeat from" ,leader_index, "but thinks that", self.leader_index, "is the leader"
+      #print "client", self.index, "got heartbeat from" ,leader_index, "but thinks that", self.leader_index, "is the leader"
+      print "changing leader to", leader_index
+      self.leader_index = leader_index
+      self.leader_time = currentTimeMillis()
     else:
       self.leader_time = currentTimeMillis()
     
@@ -39,6 +47,7 @@ class Client():
       message = commands[1]
       tag = (self.index, self.LC)
       self.server_out[self.leader_index].send((CONST.SEND, tag, message))
+      self.messages.append((tag, message))
     elif current == CONST.PRINT_CHAT_LOG:
       print "client", self.index, "print chat"
     elif current == CONST.SKIP_SLOTS:
@@ -66,6 +75,9 @@ class Client():
         elif message[0] == CONST.HEARTBEAT:
           #(CONST.HEARTBEAT, leader_index)
           self.update_leader_alive(message[1])
+        elif message[0] == CONST.DECIDED_SET:
+          log = message[1]
+          print "THE CLIENT GOT", log
 
       self.check_leader_and_modify()
 

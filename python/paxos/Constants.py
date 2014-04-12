@@ -16,6 +16,9 @@ class _Const(object):
   @constant
   def DIST_CLIENT_INDEX():
     return 0
+  @constant
+  def TIMEOUT():
+    return 500
 
   ### SERVER CONSTANTS ###
   @constant
@@ -42,17 +45,30 @@ class _Const(object):
   def MESSAGE():
     return "MESSAGE_CONSTANT"
   @constant
+  def PREP_MAJORITY():
+    return "PREP_MAJORITY_CONSTANT"
+  @constant
   def PREP_ACCEPT():
     return "PREP_ACCEPT_CONSTANT"
   @constant
-  def PREP_RESPONSE():
-    return "PREP_RESPONSE_CONSTANT"
+  def PREP_NACK():
+    return "PREP_NACK_CONSTANT"
+  @constant
+  def ACCEPT_ACK():
+    return "ACCEPT_ACK_CONSTANT"
+  @constant
+  def ACCEPT_NACK():
+    return "ACCEPT_NACK_CONSTANT"
+  @constant
+  def ACCEPT_MAJORITY():
+    return "ACCEPT_MAJORITY_CONSTANT"
   
 
   ### CLIENT CONSTANTS ###
   @constant
   def LEADER_HEARTBEAT_TIME():
     return -12345
+  @constant
   def LEADER_TIMEOUT():
     return 250 #milliseconds
 
@@ -83,6 +99,9 @@ class _Const(object):
   @constant
   def HEARTBEAT():
     return "HEARTBEAT_CONSTANT"
+  @constant
+  def DECIDED_SET():
+    return "NEW_LEARNED_SET"
 
   ### SERVER TO SERVER ###
   @constant
@@ -94,6 +113,12 @@ class _Const(object):
   @constant
   def PROPOSE():
     return "PROPOSE_CONSTANT"
+  @constant
+  def ACCEPT():
+    return "ACCEPT_CONSTANT"
+  @constant
+  def DECIDE():
+    return "DECIDE_CONSTANT"
 
 
 CONST = _Const()

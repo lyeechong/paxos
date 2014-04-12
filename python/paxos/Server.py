@@ -2,6 +2,9 @@
 
 from Constants import CONST
 import Queue
+import time
+
+currentTimeMillis = lambda: int(round(time.time() * 1000))
 
 class Server():
   def __init__(self, client_index, pipe_in, clients_out, servers_out, master_out):
@@ -14,15 +17,25 @@ class Server():
     self.num_nodes = len(servers_out)
 
     self.is_paxosing = False
-    self.messageQueue = Queue.Queue()
+    self.messageQueue = []
 
     self.ballot_num = 0
     self.proposals = {}
     self.prep_accept = set()
     self.prep_response = set()
 
-    self.current_max_ballot = -1
+    self.current_max_ballot = (-1, -1) #(server#, ballot#)
     self.learned_messages = {}
+    self.isLearning = False
+
+    self.server_alive = {}
+    currentTime = currentTimeMillis()
+    for i in range(self.num_nodes):
+      self.server_alive[i] = currentTime
+    self.learned_from = set()
+    
+    self.decided = {}
+
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
@@ -39,7 +52,17 @@ class Server():
   def queueMessage(self, tag, message):
     #tag = (client_index, client_LC)
     tagged_message = (tag, message)
-    self.messageQueue.put(tagged_message)
+    self.messageQueue.append(tagged_message)
+
+  def update_servers_heartbeat(self, server_index):
+    self.server_alive[server_index] = currentTimeMillis()
+  
+  def update_servers_alive(self):
+    current_time = currentTimeMillis()
+    for server_index, last_time in self.server_alive.items():
+      if current_time - last_time > CONST.TIMEOUT:
+        del self.server_alive[server_index]
+        print server_index, "dead"
 
   def start_paxos(self, tagged_message):
     _client_tag = tagged_message[0]
@@ -49,8 +72,12 @@ class Server():
     server_tag = (self.index, ballot)
     self.proposals[server_tag] =  {CONST.CLIENT_TAG: _client_tag,
                                     CONST.MESSAGE: msg,
+                                    CONST.PREP_MAJORITY: False,
                                     CONST.PREP_ACCEPT: set(),
-                                    CONST.PREP_RESPONSE: set()}
+                                    CONST.PREP_NACK: set(),
+                                    CONST.ACCEPT_MAJORITY: False,
+                                    CONST.ACCEPT_ACK: set(),
+                                    CONST.ACCEPT_NACK: set()}
     #PREPARE()
     self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, server_tag))
   
@@ -59,6 +86,16 @@ class Server():
     self.ballot_num += 1
     return ret_num
 
+  def compare_ballot(self, server_tag):
+    (server_index, ballot) = server_tag
+    (c_index, c_ballot) = self.current_max_ballot
+    if ballot > c_ballot:
+      return True
+    if server_index < c_index:
+      return False
+    return True
+  
+
   def from_proposer(self, args):
     command = args[0]
     print args
@@ -66,12 +103,33 @@ class Server():
       server_tag = args[1]
       (server_index, ballot) = server_tag
       msg = ()
-      if ballot > self.current_max_ballot:
-        self.current_max_ballot = ballot
+      if self.compare_ballot(server_tag):
+        self.current_max_ballot = server_tag
         msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index, server_tag)
       else:
         msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index, server_tag)
       self.send_server(server_index, msg)
+    elif command == CONST.ACCEPT:
+      print self.index, "yay", args
+      server_tag = args[1]
+      (server_index, ballot) = server_tag
+      msg = ()
+      if self.compare_ballot(server_tag):
+        msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.ACK, self.index, server_tag)
+      else:
+        msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.NACK, self.index, server_tag)
+      self.send_server(server_index, msg)
+    elif command == CONST.DECIDE:
+      print "sup we are going to decide"
+      server_tag = args[1]
+      message = args[2]
+      client_index = args[3]
+      slot_num = args[4]
+      self.decided[slot_num] = (client_index, message)
+      if self.is_leader:
+        print "I AM THE LEADER AND I AM GOING TO SEND!!"
+        msg = (CONST.DECIDED_SET, self.decided)
+        self.broadcast_clients(msg)
 
   def from_acceptor(self, args):
     print "from"
@@ -80,20 +138,54 @@ class Server():
       response = args[1]
       accept_index = args[2]
       server_tag = args[3]
-      self.proposals[server_tag][CONST.PREP_RESPONSE].add(accept_index)
+      this_proposal = self.proposals[server_tag]
       if response == CONST.ACK:
-        self.proposals[server_tag][CONST.PREP_ACCEPT].add(accept_index)
-      if len(self.proposals[server_tag][CONST.PREP_ACCEPT]) > self.num_nodes/2:
-        print "yay we got all the promises!"
+        this_proposal[CONST.PREP_ACCEPT].add(accept_index)
+        if len(this_proposal[CONST.PREP_ACCEPT]) > self.num_nodes/2 and not this_proposal[CONST.PREP_MAJORITY]:
+          print self.index, "yay we got all the promises for", this_proposal[CONST.MESSAGE]
+          this_proposal[CONST.PREP_MAJORITY] = True
+          msg = (CONST.PROPOSER, CONST.ACCEPT, server_tag, this_proposal[CONST.MESSAGE])
+          self.broadcast_servers(msg)
+      elif response == CONST.NACK:
+        #TODO
+        #any nacks should abort and prepdn the proposal to the beginning of message quue
+        print "ABORTT"
+    elif command == CONST.ACCEPT:
+      response = args[1]
+      accept_index = args[2]
+      server_tag = args[3]
+      this_proposal = self.proposals[server_tag]
+      if response == CONST.ACK:
+        this_proposal[CONST.ACCEPT_ACK].add(accept_index)
+      if len(this_proposal[CONST.ACCEPT_ACK]) > self.num_nodes/2 and not this_proposal[CONST.ACCEPT_MAJORITY]:
+        print self.index, "yay we got all the accepts for", this_proposal[CONST.MESSAGE]
+        this_proposal[CONST.ACCEPT_MAJORITY] = True
+        # PROPOSER, DECIDE, SERVER_TAG, MESSAGE, CLIENT_INDEX, SLOT_NUM
+        msg = (CONST.PROPOSER, CONST.DECIDE, server_tag, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0], 0)
+        self.broadcast_servers(msg)
+      elif response == CONST.NACK:
+        #TODO
+        #any nacks should abort and prepend the proposal to the begining of message queue
+        print "ABORTT"
 
   def run(self):
     print "hello from server", self.index
     self.master_out.send(("S", self.index)) # ack the master
     while True:
+      if self.is_leader:
+        self.broadcast_clients((CONST.HEARTBEAT, self.index))
+      #for i in range(self.num_nodes):
+      #  if i != self.index:
+      #    self.server_out[i].send((CONST.HEARTBEAT, self.index))
+
       if self.conn.poll():
         message = self.conn.recv()
+        print "server", self.index, message
         if message[0] == CONST.ASSIGN_LEADER:
           self.is_leader = True
+          print self.index, "IM THE LEADER"
+        elif message[0] == CONST.HEARTBEAT:
+          self.update_servers_heartbeat(message[1])
         elif message[0] == CONST.SEND:
           #(CONST.SEND, tag, message)
           self.queueMessage(message[1], message[2])
@@ -103,11 +195,9 @@ class Server():
         elif message[0] == CONST.ACCEPTOR:
           self.from_acceptor(message[1:])
 
-      if self.is_leader:
-        self.broadcast_clients((CONST.HEARTBEAT, self.index))
       
-      if not self.is_paxosing and not self.messageQueue.empty():
-        message_to_propose = self.messageQueue.get()
+      if not self.is_paxosing and len(self.messageQueue)>0:
+        message_to_propose = self.messageQueue.pop(0)
         self.is_paxosing = True
         self.start_paxos(message_to_propose)
 
