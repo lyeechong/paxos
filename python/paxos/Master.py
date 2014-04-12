@@ -7,6 +7,17 @@ from Client import start_client
 from Server import start_server
 from Constants import CONST
 
+debug_on = True # if this is true, the debug messages are printed. Turn off before submitting
+
+def dprint(string):
+  '''
+  Print for the debug statements.
+  Prepends "Master: " before all the strings.
+  Can be turned off by settings the debug_on flag to False.
+  '''
+  if debug_on:
+    print "Master: " + str(string)
+
 if __name__ == "__main__":
     nodes, clients, = [], []
     num_nodes, num_clients = 0, 0
@@ -17,14 +28,17 @@ if __name__ == "__main__":
     master_in = None
     master_out = None
     
-    for line in fileinput.input():
-        line = line.split();
+    for raw_line in fileinput.input():
+        line = raw_line.split();
+        
+        dprint("executing: " + raw_line)
+        
         if line[0] == 'start':
             num_nodes = int(line[1])
             num_clients = int(line[2])
             """ start up the right number of nodes and clients, and store the 
                 connections to them for sending further commands """
-            print "num_nodes:", num_nodes, "num_clients:", num_clients
+            dprint("num_nodes:" + str(num_nodes) + "num_clients:" + str(num_clients))
             for i in range(num_clients):
               cout, cin = mp.Pipe()
               client_out.append(cout)
@@ -66,39 +80,39 @@ if __name__ == "__main__":
             message = string.join(line[2::])
             """ Instruct the client specified by client_index to send the message
                 to the proper paxos node """
-            print "client:", client_index, "sending:", message
+            dprint("client: " +  str(client_index) +  "sending: "+ message)
             client_out[client_index].send((CONST.MASTER, CONST.SEND, message))
 
         if line[0] == 'printChatLog':
             client_index = int(line[1])
             """ Print out the client specified by client_index's chat history
                 in the format described on the handout """
-            print "client:", client_index, "printChatLog"
+            dprint("client: " + str(client_index) + "printChatLog")
 
         if line[0] == 'allClear':
             """ Ensure that this blocks until all messages that are going to 
                 come to consensus in PAXOS do, and that all clients have heard
                 of them """
-            print "allClear"
+            ## TODO
             clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.ALL_CLEAR))
         if line[0] == 'crashServer':
             node_index = int(line[1])
             """ Immediately crash the server specified by node_index """
             currentNode = nodes[node_index]
-            print "crashing server", node_index
+            dprint("crashing Server " + str(node_index))
             if currentNode.is_alive():
               currentNode.terminate()
               #block until it is dead
               while currentNode.is_alive():
                 pass
-              print "we crashed server", node_index
+              dprint("we crashed server" + str(node_index))
             else:
-              print node_index, "already_dead"
+              dprint(str(node_index) + "already_dead")
             time.sleep(.25)
         if line[0] == 'restartServer':
             node_index = int(line[1])
             """ Restart the server specified by node_index """
-            print "restarting server", node_index
+            dprint("restarting server" + str(node_index))
             currentNode = nodes[node_index]
             if not currentNode.is_alive():
               p = mp.Process( target = start_server, args = (node_index, server_in[node_index], client_out, server_out, master_out,))
@@ -114,17 +128,15 @@ if __name__ == "__main__":
                 pass
               time.sleep(.25)
             else:
-              print "node ", node_index, "is still alive"
+              dprint("node " + node_index + "is still alive")
               
         if line[0] == 'skipSlots':
             amount_to_skip = int(line[1])
             """ Instruct the leader to skip slots in the chat message sequence """
-            print "skipSlots", amount_to_skip
             clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.SKIP_SLOTS))
         if line[0] == 'timeBombLeader':
             num_messages = int(line[1])
             """ Instruct the leader to crash after sending the number of paxos
                 related messages specified by num_messages """
-            print 'timeBombLeader', num_messages
             clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER))
   

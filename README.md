@@ -13,3 +13,5 @@ Add slot numbers
 Timeouts on prepare/accept
 
 Restarting proposals after people die
+
+All clear command needs to be done in Master

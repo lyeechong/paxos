@@ -25,7 +25,7 @@ class Client():
     More useful for debugging.
     '''
     if self.debug_on:
-      print "Client " + str(self.index) + ": " + string
+      print "Client " + str(self.index) + ": " + str(string)
 
   def check_leader_and_modify(self):
     dTime = currentTimeMillis() - self.leader_time
