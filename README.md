@@ -1,17 +1,15 @@
 paxos
 =====
-TODO:
-
 python Master.py < selfTest.test
 
-Make a proposal_set and acceptance_set that have numbers and messages
+TODO:
 
-Learned messages??
+Check the program still works after Lyee coding in each proposal also containing a slot number
 
-Add slot numbers
+Deal with Nacks/Restarting proposals after people die
+
+Learned messages
 
 Timeouts on prepare/accept
-
-Restarting proposals after people die
 
 All clear command needs to be done in Master
