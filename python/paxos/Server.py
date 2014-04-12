@@ -16,7 +16,7 @@ class Server():
     self.is_leader = False
     self.num_nodes = len(servers_out)
 
-    self.is_paxosing = False
+    self.is_paxosing = False # if there is a proposal
     self.messageQueue = []
 
     self.ballot_num = 0
@@ -24,18 +24,29 @@ class Server():
     self.prep_accept = set()
     self.prep_response = set()
 
-    self.current_max_ballot = (-1, -1) #(server#, ballot#)
+    self.current_max_ballot = (-1, -1) # (server number, ballot number)
     self.learned_messages = {}
     self.isLearning = False
 
     self.server_alive = {}
+    
+    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
+    
     currentTime = currentTimeMillis()
+    
     for i in range(self.num_nodes):
       self.server_alive[i] = currentTime
     self.learned_from = set()
     
     self.decided = {}
-
+    
+  def dprint(self, string):
+    '''
+    Prepends the server's number before the string to be printed.
+    More useful for debugging.
+    '''
+    if self.debug_on:
+      print "Server " + str(self.index) + ": " + str(string)
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
@@ -62,12 +73,12 @@ class Server():
     for server_index, last_time in self.server_alive.items():
       if current_time - last_time > CONST.TIMEOUT:
         del self.server_alive[server_index]
-        print server_index, "dead"
+        self.dprint(server_index + "dead")
 
   def start_paxos(self, tagged_message):
     _client_tag = tagged_message[0]
     msg = tagged_message[1]
-    print _client_tag, msg, "hi", self.is_paxosing
+    self.dprint(str(_client_tag) + str(msg) + "hi" + str(self.is_paxosing))
     ballot = self.get_ballot_num()
     server_tag = (self.index, ballot)
     self.proposals[server_tag] =  {CONST.CLIENT_TAG: _client_tag,
@@ -98,7 +109,7 @@ class Server():
 
   def from_proposer(self, args):
     command = args[0]
-    print args
+    self.dprint("from proposer: " + str(args))
     if command == CONST.PREPARE:
       server_tag = args[1]
       (server_index, ballot) = server_tag
@@ -110,7 +121,7 @@ class Server():
         msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index, server_tag)
       self.send_server(server_index, msg)
     elif command == CONST.ACCEPT:
-      print self.index, "yay", args
+      self.dprint("proposer gave command accept with args: " + str(args))
       server_tag = args[1]
       (server_index, ballot) = server_tag
       msg = ()
@@ -120,19 +131,19 @@ class Server():
         msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.NACK, self.index, server_tag)
       self.send_server(server_index, msg)
     elif command == CONST.DECIDE:
-      print "sup we are going to decide"
+      self.dprint("proposer gave command decide")
       server_tag = args[1]
       message = args[2]
       client_index = args[3]
       slot_num = args[4]
       self.decided[slot_num] = (client_index, message)
       if self.is_leader:
-        print "I AM THE LEADER AND I AM GOING TO SEND!!"
+        self.dprint("I am the leader and I'm going to send")
         msg = (CONST.DECIDED_SET, self.decided)
         self.broadcast_clients(msg)
 
   def from_acceptor(self, args):
-    print "from"
+    self.dprint("from acceptor: " + str(args))
     command = args[0]
     if command == CONST.PREPARE:
       response = args[1]
@@ -142,14 +153,14 @@ class Server():
       if response == CONST.ACK:
         this_proposal[CONST.PREP_ACCEPT].add(accept_index)
         if len(this_proposal[CONST.PREP_ACCEPT]) > self.num_nodes/2 and not this_proposal[CONST.PREP_MAJORITY]:
-          print self.index, "yay we got all the promises for", this_proposal[CONST.MESSAGE]
+          self.dprint("got all the promises for" + str(this_proposal[CONST.MESSAGE]))
           this_proposal[CONST.PREP_MAJORITY] = True
           msg = (CONST.PROPOSER, CONST.ACCEPT, server_tag, this_proposal[CONST.MESSAGE])
           self.broadcast_servers(msg)
       elif response == CONST.NACK:
         #TODO
-        #any nacks should abort and prepdn the proposal to the beginning of message quue
-        print "ABORTT"
+        #any nacks should abort and prepend the proposal to the beginning of message queue
+        self.dprint("abort! got nack")
     elif command == CONST.ACCEPT:
       response = args[1]
       accept_index = args[2]
@@ -158,7 +169,7 @@ class Server():
       if response == CONST.ACK:
         this_proposal[CONST.ACCEPT_ACK].add(accept_index)
       if len(this_proposal[CONST.ACCEPT_ACK]) > self.num_nodes/2 and not this_proposal[CONST.ACCEPT_MAJORITY]:
-        print self.index, "yay we got all the accepts for", this_proposal[CONST.MESSAGE]
+        self.dprint("got all the accepts for" + str(this_proposal[CONST.MESSAGE]))       
         this_proposal[CONST.ACCEPT_MAJORITY] = True
         # PROPOSER, DECIDE, SERVER_TAG, MESSAGE, CLIENT_INDEX, SLOT_NUM
         msg = (CONST.PROPOSER, CONST.DECIDE, server_tag, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0], 0)
@@ -166,10 +177,10 @@ class Server():
       elif response == CONST.NACK:
         #TODO
         #any nacks should abort and prepend the proposal to the begining of message queue
-        print "ABORTT"
+        self.dprint("abort! got nack")
 
   def run(self):
-    print "hello from server", self.index
+    self.dprint("hello! server is now running!")
     self.master_out.send(("S", self.index)) # ack the master
     while True:
       if self.is_leader:
@@ -180,10 +191,10 @@ class Server():
 
       if self.conn.poll():
         message = self.conn.recv()
-        print "server", self.index, message
+        self.dprint("got a message!: " + str(message))
         if message[0] == CONST.ASSIGN_LEADER:
           self.is_leader = True
-          print self.index, "IM THE LEADER"
+          self.dprint("I am the leader!")
         elif message[0] == CONST.HEARTBEAT:
           self.update_servers_heartbeat(message[1])
         elif message[0] == CONST.SEND:
