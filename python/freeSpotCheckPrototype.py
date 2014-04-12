@@ -14,8 +14,16 @@ print yay
 print yay[-1]
 '''
 
+
+'''
 spots = {}
 spots[1] = 3
 
 print 1 in spots.keys()
 print 2 in spots.keys()
+'''
+
+spots = {}
+
+if not spots:
+  print "empty!"

@@ -105,7 +105,11 @@ class Server():
     '''
     temp = self.decided.keys()
     temp.sort()
-    return temp[-1] + 1 # this is the next free spot since we're skipping the skipped slots    
+    if not temp:
+      # the mapping is empty!
+      return 0
+    else:
+      return temp[-1] + 1 # this is the next free spot since we're skipping the skipped slots    
   
   def get_ballot_num(self):
     '''
@@ -123,12 +127,11 @@ class Server():
     the highest_competiting_ballot_value mapping.
     '''
     (server_index, new_ballot_val, requested_spot) = spot_request
-    current_high_val = self.highest_competing_ballot_value[slot_number]
     # check if the requested spot already has a competing ballot value
     if requested_spot in self.highest_competing_ballot_value.keys():
       # there is a competing ballot value, so compare ballot values
       (current_server_index, current_ballot_value) = self.highest_competing_ballot_value[requested_spot]
-      if new_ballot_val == current_ballot_value
+      if new_ballot_val == current_ballot_value:
         # there's a tie! so check leader numbers
         if server_index > current_server_index:
           self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
@@ -142,15 +145,15 @@ class Server():
         return False
     else:
       # there is no competiting ballot value, so set this ballot to be the current highest ballot
-        self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
+      self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
       return True
 
   def from_proposer(self, args):
     command = args[0]
     self.dprint("from proposer: " + str(args))
     if command == CONST.PREPARE:
-      server_tag = args[1]
-      (server_index, ballot_num, requested_spot) = server_tag
+      spot_request = args[1]
+      (server_index, ballot_num, requested_spot) = spot_request
       msg = ()
       if self.update_competing_ballots(spot_request):
         msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index, spot_request)
@@ -159,23 +162,23 @@ class Server():
       self.send_server(server_index, msg)
     elif command == CONST.ACCEPT:
       self.dprint("proposer gave command accept with args: " + str(args))
-      server_tag = args[1]
-      (server_index, ballot) = server_tag
+      spot_request = args[1]
+      (server_index, ballot_num, requested_spot) = spot_request
       msg = ()
-      if self.compare_ballot(server_tag):
-        msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.ACK, self.index, server_tag)
+      if self.update_competing_ballots(spot_request):
+        msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.ACK, self.index, spot_request)
       else:
-        msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.NACK, self.index, server_tag)
+        msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.NACK, self.index, spot_request)
       self.send_server(server_index, msg)
     elif command == CONST.DECIDE:
       self.dprint("proposer gave command decide")
-      server_tag = args[1]
+      spot_request = args[1]
       message = args[2]
       client_index = args[3]
-      slot_num = args[4]
-      self.decided[slot_num] = (client_index, message)
+      (server_index, ballot_num, requested_spot) = spot_request
+      self.decided[requested_spot] = (client_index, message) # put the message in the requested spot
       if self.is_leader:
-        self.dprint("I am the leader and I'm going to send")
+        self.dprint("I am the leader and I'm going to send") # huhhhh?
         msg = (CONST.DECIDED_SET, self.decided)
         self.broadcast_clients(msg)
 
@@ -184,15 +187,15 @@ class Server():
     command = args[0]
     if command == CONST.PREPARE:
       response = args[1]
-      accept_index = args[2]
-      server_tag = args[3]
-      this_proposal = self.proposals[server_tag]
+      accepted_server_number = args[2]
+      spot_request = args[3]
+      this_proposal = self.proposals[spot_request]
       if response == CONST.ACK:
-        this_proposal[CONST.PREP_ACCEPT].add(accept_index)
+        this_proposal[CONST.PREP_ACCEPT].add(accepted_server_number)
         if len(this_proposal[CONST.PREP_ACCEPT]) > self.num_nodes/2 and not this_proposal[CONST.PREP_MAJORITY]:
           self.dprint("got all the promises for" + str(this_proposal[CONST.MESSAGE]))
           this_proposal[CONST.PREP_MAJORITY] = True
-          msg = (CONST.PROPOSER, CONST.ACCEPT, server_tag, this_proposal[CONST.MESSAGE])
+          msg = (CONST.PROPOSER, CONST.ACCEPT, spot_request, this_proposal[CONST.MESSAGE])
           self.broadcast_servers(msg)
       elif response == CONST.NACK:
         #TODO
@@ -201,16 +204,15 @@ class Server():
     elif command == CONST.ACCEPT:
       response = args[1]
       accept_index = args[2]
-      server_tag = args[3]
-      this_proposal = self.proposals[server_tag]
+      spot_request = args[3]
+      this_proposal = self.proposals[spot_request]
       if response == CONST.ACK:
         this_proposal[CONST.ACCEPT_ACK].add(accept_index)
       if len(this_proposal[CONST.ACCEPT_ACK]) > self.num_nodes/2 and not this_proposal[CONST.ACCEPT_MAJORITY]:
         self.dprint("got all the accepts for" + str(this_proposal[CONST.MESSAGE]))       
         this_proposal[CONST.ACCEPT_MAJORITY] = True
-        # PROPOSER, DECIDE, SERVER_TAG, MESSAGE, CLIENT_INDEX, SLOT_NUM
-        slot_number = #TODO
-        msg = (CONST.PROPOSER, CONST.DECIDE, server_tag, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0], slot_number)
+        # PROPOSER, DECIDE, SPOT_REQUEST, MESSAGE, CLIENT_INDEX
+        msg = (CONST.PROPOSER, CONST.DECIDE, spot_request, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0])
         self.broadcast_servers(msg)
       elif response == CONST.NACK:
         #TODO
