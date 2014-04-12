@@ -31,7 +31,7 @@ class Server():
 
     self.server_alive = {}
     
-    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
+    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
     
     currentTime = currentTimeMillis()
     
@@ -181,7 +181,8 @@ class Server():
       self.decided[requested_spot] = (client_index, message) # put the message in the requested spot
       if self.is_leader:
         self.dprint("I am the leader and I'm going to send") # huhhhh?
-        msg = (CONST.DECIDED_SET, (requested_spot, self.decided[requested_spot]))
+        # (DECIDE, CLIENT_TAG, REQUEST_SPOT, (INDEX, MSG))
+        msg = (CONST.DECIDED_SET, (self.proposals[spot_request][CONST.CLIENT_TAG], requested_spot, self.decided[requested_spot]))
         self.broadcast_clients(msg)
         self.is_paxosing = False
 
@@ -204,6 +205,7 @@ class Server():
         #TODO
         #any nacks should abort and prepend the proposal to the beginning of message queue
         self.dprint("abort! got nack")
+        self.abort_paxos(spot_request)
     elif command == CONST.ACCEPT:
       response = args[1]
       accept_index = args[2]
@@ -221,6 +223,12 @@ class Server():
         #TODO
         #any nacks should abort and prepend the proposal to the begining of message queue
         self.dprint("abort! got nack")
+        self.abort_paxos(spot_request)
+
+  def abort_paxos(self, spot_request):
+    this_proposal = self.proposal[spot_request]
+    self.messageQueue.insert(0, (this_proposal[CONST.CLIENT_TAG], this_proposal[CONST.MESSAGE]))
+    self.is_paxosing = False
 
   def run(self):
     self.dprint("hello! This server is now running!")
@@ -244,9 +252,7 @@ class Server():
           #(CONST.SEND, tag, message)
           self.queueMessage(message[1], message[2])
         elif message[0] == CONST.SKIP_SLOTS:
-          msg = "SEND A NOOP DECIDE"
-          self.broadcast_servers()
-
+          pass
         elif message[0] == CONST.PROPOSER:
           self.from_proposer(message[1:])
         elif message[0] == CONST.ACCEPTOR:

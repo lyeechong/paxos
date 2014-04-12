@@ -7,7 +7,7 @@ from Client import start_client
 from Server import start_server
 from Constants import CONST
 
-debug_on = True # if this is true, the debug messages are printed. Turn off before submitting
+debug_on = False # if this is true, the debug messages are printed. Turn off before submitting
 
 def dprint(string):
   '''
@@ -88,6 +88,7 @@ if __name__ == "__main__":
             """ Print out the client specified by client_index's chat history
                 in the format described on the handout """
             dprint("client: " + str(client_index) + "printChatLog")
+            client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.PRINT_CHAT_LOG))
 
         if line[0] == 'allClear':
             """ Ensure that this blocks until all messages that are going to 
@@ -134,7 +135,7 @@ if __name__ == "__main__":
         if line[0] == 'skipSlots':
             amount_to_skip = int(line[1])
             """ Instruct the leader to skip slots in the chat message sequence """
-            clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.SKIP_SLOTS, amount_to_skip))
+            client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.SKIP_SLOTS, amount_to_skip))
         if line[0] == 'timeBombLeader':
             num_messages = int(line[1])
             """ Instruct the leader to crash after sending the number of paxos

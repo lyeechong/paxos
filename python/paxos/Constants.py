@@ -94,6 +94,9 @@ class _Const(object):
   @constant
   def ASSIGN_LEADER():
     return "ASSIGN_LEADER_CONSTANT"
+  @constant
+  def NOOP():
+    return "NOOP_CONSTANT_WOOT_WOOT"
 
   ### SERVER TO CLIENT ###
   @constant
