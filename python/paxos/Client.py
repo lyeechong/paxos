@@ -15,9 +15,17 @@ class Client():
     #self.leader = [0, CONST.LEADER_HEARTBEAT_TIME] #(leader_index [initially 0], last heartbeattime)
     self.leader_index = 0
     self.leader_time = currentTimeMillis()
-    self.LC = 0
-
+    self.LC = 0 # lamport clock
+    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
     self.messages = []
+  
+  def dprint(self, string):
+    '''
+    Prepends the client's number before the string to be printed.
+    More useful for debugging.
+    '''
+    if self.debug_on:
+      print "Client " + str(self.index) + ": " + string
 
   def check_leader_and_modify(self):
     dTime = currentTimeMillis() - self.leader_time
@@ -25,7 +33,7 @@ class Client():
       self.leader_index = (self.leader_index+1)%len(self.server_out)
       self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
       self.leader_time = currentTimeMillis()
-      print self.index, "chagning leader to", self.leader_index
+      self.dprint("changing leader to Server " + str(self.leader_index))
       for tag, msg in self.messages:
         self.server_out[self.leader_index].send((CONST.SEND, tag, msg))
       #possibly tell everyone else?
@@ -33,8 +41,8 @@ class Client():
   def update_leader_alive(self, leader_index):
     if leader_index != self.leader_index:
       #print "client", self.index, "got heartbeat from" ,leader_index, "but thinks that", self.leader_index, "is the leader"
-      print "changing leader to", leader_index
       self.leader_index = leader_index
+      self.dprint("changing leader to Server " + str(self.leader_index))
       self.leader_time = currentTimeMillis()
     else:
       self.leader_time = currentTimeMillis()
@@ -49,7 +57,7 @@ class Client():
       self.server_out[self.leader_index].send((CONST.SEND, tag, message))
       self.messages.append((tag, message))
     elif current == CONST.PRINT_CHAT_LOG:
-      print "client", self.index, "print chat"
+      self.dprint("print chat command issued")
     elif current == CONST.SKIP_SLOTS:
       #send skip slots to master
       pass
@@ -60,10 +68,10 @@ class Client():
       #time_bomb_leader
       pass
     else:
-      print "Not the right command"
+      self.dprint ("unhandled command " + current)
 
   def run(self):
-    print "hello from client", self.index
+    self.dprint( "hello from Client " + str(self.index))
     self.master_out.send(("C", self.index)) #ack the master
     self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,)) #tell the leader he's the leader
     while True:
@@ -77,7 +85,7 @@ class Client():
           self.update_leader_alive(message[1])
         elif message[0] == CONST.DECIDED_SET:
           log = message[1]
-          print "THE CLIENT GOT", log
+          self.dprint("client log " + str(log))
 
       self.check_leader_and_modify()
 

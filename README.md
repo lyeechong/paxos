@@ -1,13 +1,15 @@
 paxos
 =====
-Plan:
+TODO:
 
-We'll need the basic messaging framework before we even start on actual Paxos.
+python Master.py < selfTest.test
 
-Idea:
+clean up print statements
 
-One socket for each server, all using the localhost address. (Since it mentions that we can assume the clients know who the servers are).
+Make a proposal_set and acceptance_set that have numbers and messages
 
-Have each client communicate to the server port.
+Add slot numbers
 
-Having a standard serializable Java object we can send as a message would be handy. (Instead of sending Strings.)
+Timeouts on prepare/accept
+
+Restarting proposals after people die
