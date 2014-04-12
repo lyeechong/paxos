@@ -220,7 +220,7 @@ class Server():
         self.dprint("abort! got nack")
 
   def run(self):
-    self.dprint("hello! server is now running!")
+    self.dprint("hello! This server is now running!")
     self.master_out.send(("S", self.index)) # ack the master
     while True:
       if self.is_leader:
