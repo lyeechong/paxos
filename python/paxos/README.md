@@ -22,6 +22,7 @@ sendMessage - `(SEND, tag = <client_index, client_LC> , msg)`
 - ~~Have each proposal also have an associate slot number~~
 - Check the program still works after Lyee coding in each proposal also containing a slot number
 - Update this readme with the new message formats
+- check why Master doesn't exit after the end of a file
 - Deal with Nacks/Restarting proposals after people die
 - Learned messages
 - Timeouts on prepare/accept
