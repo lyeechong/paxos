@@ -7,3 +7,4 @@ restartServer 1
 crashServer 0
 restartServer 0
 sendMessage 0 hello World
+sendMessage 0 goodbye World

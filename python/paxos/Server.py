@@ -103,6 +103,7 @@ class Server():
     '''
     finds the next free spot a message can fit in (based off the current set of decided values) and returns it
     '''
+    """
     temp = self.decided.keys()
     temp.sort()
     if not temp:
@@ -110,7 +111,8 @@ class Server():
       return 0
     else:
       return temp[-1] + 1 # this is the next free spot since we're skipping the skipped slots    
-  
+    """
+    return len(self.decided)
   def get_ballot_num(self):
     '''
     returns the next ballot number of this server
@@ -133,7 +135,7 @@ class Server():
       (current_server_index, current_ballot_value) = self.highest_competing_ballot_value[requested_spot]
       if new_ballot_val == current_ballot_value:
         # there's a tie! so check leader numbers
-        if server_index > current_server_index:
+        if server_index >= current_server_index: # >= because it might be the same ballot
           self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
           return True
         else:
@@ -179,8 +181,9 @@ class Server():
       self.decided[requested_spot] = (client_index, message) # put the message in the requested spot
       if self.is_leader:
         self.dprint("I am the leader and I'm going to send") # huhhhh?
-        msg = (CONST.DECIDED_SET, self.decided)
+        msg = (CONST.DECIDED_SET, (requested_spot, self.decided[requested_spot]))
         self.broadcast_clients(msg)
+        self.is_paxosing = False
 
   def from_acceptor(self, args):
     self.dprint("from acceptor: " + str(args))
@@ -240,6 +243,9 @@ class Server():
         elif message[0] == CONST.SEND:
           #(CONST.SEND, tag, message)
           self.queueMessage(message[1], message[2])
+        elif message[0] == CONST.SKIP_SLOTS:
+          msg = "SEND A NOOP DECIDE"
+          self.broadcast_servers()
 
         elif message[0] == CONST.PROPOSER:
           self.from_proposer(message[1:])

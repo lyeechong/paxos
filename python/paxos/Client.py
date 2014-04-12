@@ -60,6 +60,8 @@ class Client():
       self.dprint("print chat command issued")
     elif current == CONST.SKIP_SLOTS:
       #send skip slots to master
+      num_slots = commands[1]
+      self.server_out[self.leader_index].send((CONST.SKIP_SLOTS, num_slots))
       pass
     elif current == CONST.ALL_CLEAR:
       #all_clear
