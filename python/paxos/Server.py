@@ -17,16 +17,17 @@ class Server():
     self.num_nodes = len(servers_out)
 
     self.is_paxosing = False # if there is a proposal
-    self.messageQueue = []
+    self.messageQueue = [] # the proposals which are to be sent out
 
-    self.ballot_num = 0
-    self.proposals = {}
+    self.ballot_num = 0 # this server's strictly increasing ballot numbers
+    self.proposals = {} # the current set of proposals which originated from this server
     self.prep_accept = set()
     self.prep_response = set()
+    
+    self.highest_competing_ballot_value = {} # a mapping of slot number to the highest ballot number which has been proposed (we don't need to store the actual proposal message)
 
-    self.current_max_ballot = (-1, -1) # (server number, ballot number)
-    self.learned_messages = {}
-    self.isLearning = False
+    self.learned_messages = {} # is this used??
+    self.isLearning = False # huh?
 
     self.server_alive = {}
     
@@ -38,7 +39,7 @@ class Server():
       self.server_alive[i] = currentTime
     self.learned_from = set()
     
-    self.decided = {}
+    self.decided = {} # mapping of spot numbers to messages
     
   def dprint(self, string):
     '''
@@ -76,12 +77,18 @@ class Server():
         self.dprint(server_index + "dead")
 
   def start_paxos(self, tagged_message):
+    '''
+    starts "paxosing" for a specific message a client wants
+    '''
+    # tagged message is the message the client is requesting
     _client_tag = tagged_message[0]
     msg = tagged_message[1]
-    self.dprint(str(_client_tag) + str(msg) + "hi" + str(self.is_paxosing))
-    ballot = self.get_ballot_num()
-    server_tag = (self.index, ballot)
-    self.proposals[server_tag] =  {CONST.CLIENT_TAG: _client_tag,
+    assert (self.is_paxosing), "we started paxos for a client message but the paxosing flag isn't set!"
+    self.dprint("begin paxosing for message " + str(_client_tag) + str(msg))
+    ballot_number = self.get_ballot_num() # grab a ballot number to create a new ballot
+    proposed_spot = self.get_free_spot()
+    spot_request = (self.index, ballot_number, proposed_spot) # formerly called server_tag
+    self.proposals[spot_request] =  {CONST.CLIENT_TAG: _client_tag,
                                     CONST.MESSAGE: msg,
                                     CONST.PREP_MAJORITY: False,
                                     CONST.PREP_ACCEPT: set(),
@@ -90,35 +97,65 @@ class Server():
                                     CONST.ACCEPT_ACK: set(),
                                     CONST.ACCEPT_NACK: set()}
     #PREPARE()
-    self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, server_tag))
+    self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, spot_request))
+  
+  def get_free_spot(self):
+    '''
+    finds the next free spot a message can fit in (based off the current set of decided values) and returns it
+    '''
+    temp = self.decided.keys()
+    temp.sort()
+    return temp[-1] + 1 # this is the next free spot since we're skipping the skipped slots    
   
   def get_ballot_num(self):
+    '''
+    returns the next ballot number of this server
+    '''
     ret_num = self.ballot_num
     self.ballot_num += 1
     return ret_num
 
-  def compare_ballot(self, server_tag):
-    (server_index, ballot) = server_tag
-    (c_index, c_ballot) = self.current_max_ballot
-    if ballot > c_ballot:
+  def update_competing_ballots(self, spot_request):
+    '''
+    Compares two ballots and returns True if the ballot passed to this method
+    has a higher value than the current ballot value for the spot, otherwise returns False.
+    If the ballot happened to have a higher value than the previous, also update
+    the highest_competiting_ballot_value mapping.
+    '''
+    (server_index, new_ballot_val, requested_spot) = spot_request
+    current_high_val = self.highest_competing_ballot_value[slot_number]
+    # check if the requested spot already has a competing ballot value
+    if requested_spot in self.highest_competing_ballot_value.keys():
+      # there is a competing ballot value, so compare ballot values
+      (current_server_index, current_ballot_value) = self.highest_competing_ballot_value[requested_spot]
+      if new_ballot_val == current_ballot_value
+        # there's a tie! so check leader numbers
+        if server_index > current_server_index:
+          self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
+          return True
+        else:
+          return False
+      elif new_ballot_val > current_ballot_value:
+        self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
+        return True
+      else:
+        return False
+    else:
+      # there is no competiting ballot value, so set this ballot to be the current highest ballot
+        self.highest_competing_ballot_value[requested_spot] = (server_index, new_ballot_val)
       return True
-    if server_index < c_index:
-      return False
-    return True
-  
 
   def from_proposer(self, args):
     command = args[0]
     self.dprint("from proposer: " + str(args))
     if command == CONST.PREPARE:
       server_tag = args[1]
-      (server_index, ballot) = server_tag
+      (server_index, ballot_num, requested_spot) = server_tag
       msg = ()
-      if self.compare_ballot(server_tag):
-        self.current_max_ballot = server_tag
-        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index, server_tag)
+      if self.update_competing_ballots(spot_request):
+        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index, spot_request)
       else:
-        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index, server_tag)
+        msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index, spot_request)
       self.send_server(server_index, msg)
     elif command == CONST.ACCEPT:
       self.dprint("proposer gave command accept with args: " + str(args))
@@ -172,7 +209,8 @@ class Server():
         self.dprint("got all the accepts for" + str(this_proposal[CONST.MESSAGE]))       
         this_proposal[CONST.ACCEPT_MAJORITY] = True
         # PROPOSER, DECIDE, SERVER_TAG, MESSAGE, CLIENT_INDEX, SLOT_NUM
-        msg = (CONST.PROPOSER, CONST.DECIDE, server_tag, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0], 0)
+        slot_number = #TODO
+        msg = (CONST.PROPOSER, CONST.DECIDE, server_tag, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0], slot_number)
         self.broadcast_servers(msg)
       elif response == CONST.NACK:
         #TODO
@@ -206,8 +244,9 @@ class Server():
         elif message[0] == CONST.ACCEPTOR:
           self.from_acceptor(message[1:])
 
-      
-      if not self.is_paxosing and len(self.messageQueue)>0:
+      ''' check to see if there is a waiting proposal from a client in the queue
+      and that this server is currently  not in paxos mode. If so, begin paxos on that message '''
+      if not self.is_paxosing and len(self.messageQueue) > 0:
         message_to_propose = self.messageQueue.pop(0)
         self.is_paxosing = True
         self.start_paxos(message_to_propose)
