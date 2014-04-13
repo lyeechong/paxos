@@ -35,6 +35,7 @@ class Client():
     if dTime > CONST.TIMEOUT: #More than half a second
       self.leader_index = (self.leader_index+1)%len(self.server_out)
       self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,))
+      self.resubmit_unfinished_messages()
       self.leader_time = currentTimeMillis()
       self.dprint("changing leader to Server " + str(self.leader_index))
       #for tag, msg in self.messages:
@@ -45,10 +46,19 @@ class Client():
     if leader_index != self.leader_index:
       #print "client", self.index, "got heartbeat from" ,leader_index, "but thinks that", self.leader_index, "is the leader"
       self.leader_index = leader_index
+      self.resubmit_unfinished_messages()
       self.dprint("changing leader to Server " + str(self.leader_index))
       self.leader_time = currentTimeMillis()
     else:
       self.leader_time = currentTimeMillis()
+
+  def resubmit_unfinished_messages(self):
+    unsent = set(self.messages_sent.keys()).difference(self.received_tags)
+    self.dprint("unsent_messages"+str(unsent))
+    for tag in unsent:
+      message = self.messages_sent[tag]
+      del self.messages_sent[tag]
+      self.send_message(message)
     
   def send_message(self, message):
     tag = (self.index, self.LC)
@@ -68,7 +78,6 @@ class Client():
   def master_command(self, commands):
     #commands = (command, args..)
     current = commands[0]
-    self.dprint("hello"+current)
     if current == CONST.SEND:
       message = commands[1]
       self.send_message(message)

@@ -143,6 +143,26 @@ if __name__ == "__main__":
       """ Instruct the leader to crash after sending the number of paxos
           related messages specified by num_messages """
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER, num_messages))
-  dprint("end")
+
+  ### FINISH CLEANING UP ###
+  for pipe in server_in:
+    pipe.close()
+  for pipe in server_out:
+    pipe.close()
+  for pipe in client_in:
+    pipe.close()
+  for pipe in client_out:
+    pipe.close()
+  if master_in:
+    master_in.close()
+  if master_out:
+    master_out.close()
+  for p in nodes:
+    if p.is_alive():
+      p.terminate()
+  for p in clients:
+    if p.is_alive():
+      p.terminate()
+
 else:
   dprint("something went horribly wrong")
