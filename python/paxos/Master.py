@@ -131,7 +131,6 @@ if __name__ == "__main__":
       else:
         # we don't have a majority alive.. just return
         dprint("not a majority of servers alive for all clear, just return")
-        time.sleep(0.25)
         
     if line[0] == 'crashServer':
       node_index = int(line[1])
@@ -147,7 +146,6 @@ if __name__ == "__main__":
         dprint("we crashed server" + str(node_index))
       else:
         dprint(str(node_index) + "already_dead")
-      time.sleep(0.25)
       
     if line[0] == 'restartServer':
       node_index = int(line[1])
@@ -175,7 +173,6 @@ if __name__ == "__main__":
               cur_count +=1
             else:
               master_out.send(message)
-        time.sleep(0.25)
       else:
         dprint("node " + node_index + "is still alive")
           
