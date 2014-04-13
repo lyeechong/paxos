@@ -93,7 +93,6 @@ class Server():
     ballot_number = self.get_ballot_num() # grab a ballot number to create a new ballot
     proposed_spot = self.get_free_spot()
     self.current_proposal_waiting_for_acks = True
-    self.current_proposal_time = currentTimeMillis()    
     spot_request = (self.index, ballot_number, proposed_spot) # formerly called server_tag
     self.current_spot_request = spot_request
     self.proposals[spot_request] =  {CONST.CLIENT_TAG: _client_tag,
@@ -104,6 +103,7 @@ class Server():
                                     CONST.ACCEPT_MAJORITY: False,
                                     CONST.ACCEPT_ACK: set(),
                                     CONST.ACCEPT_NACK: set()}
+    self.current_proposal_time = currentTimeMillis()    
     #PREPARE()
     self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, spot_request))
   
