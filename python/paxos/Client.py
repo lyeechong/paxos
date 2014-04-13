@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from Constants import CONST
+from Constants import CONST, const_debug
 import time
 import sys
 
@@ -8,7 +8,7 @@ currentTimeMillis = lambda: int(round(time.time() * 1000))
 
 class Client():
   def __init__(self, client_index, pipe_in, clients_out, servers_out, master_out):
-    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
+    self.debug_on = const_debug # whether the print messages we use for debugging are printed. Turn this off when we submit
 
     self.index = client_index
     self.conn = pipe_in
@@ -30,6 +30,7 @@ class Client():
     '''
     if self.debug_on:
       print "CLIENT "+" ".join(map(str, args))
+      sys.stdout.flush()
 
   def check_leader_and_modify(self):
     dTime = currentTimeMillis() - self.leader_time
@@ -73,8 +74,9 @@ class Client():
       message = self.chat_log[slot][1]
       if message != CONST.NOOP:
         out = ''+str(slot)+" "+str(send_index)+": "+message
-        #sys.stdout.write(out)
         print out
+        sys.stdout.flush()
+    self.master_out.send((CONST.CLIENT, CONST.ACK))
 
   def master_command(self, commands):
     #commands = (command, args..)

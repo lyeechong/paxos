@@ -6,9 +6,9 @@ import time
 import sys
 from Client import start_client
 from Server import start_server
-from Constants import CONST
+from Constants import CONST, const_debug
 
-debug_on = True # if this is true, the debug messages are printed. Turn off before submitting
+debug_on = const_debug # if this is true, the debug messages are printed. Turn off before submitting
 
 def dprint(*args):
   '''
@@ -18,6 +18,7 @@ def dprint(*args):
   '''
   if debug_on:
     print "MASTER "+" ".join(map(str, args))
+    sys.stdout.flush()
 
 dprint("starting Master!")
 
@@ -68,7 +69,7 @@ if __name__ == "__main__":
       client_ack = set()
       # Wait for Acks from servers and clients starting
       while True:
-        if master_in.poll():
+        if master_in.poll(0.25):
           message = master_in.recv()
           if message[0] == "S":
             server_ack.add(message[1])
@@ -97,6 +98,13 @@ if __name__ == "__main__":
           in the format described on the handout """
       dprint("client: " + str(client_index) + "printChatLog")
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.PRINT_CHAT_LOG))
+      while True:
+        if master_in.poll(0.25):
+          message = master_in.recv()
+          if message[0] == CONST.CLIENT and message[1] == CONST.ACK:
+            break
+          else: 
+            master_out.send(message)
 
     if line[0] == 'allClear':
       """ Ensure that this blocks until all messages that are going to 
@@ -139,8 +147,13 @@ if __name__ == "__main__":
         #restart the process
         p.start()
         #block until it is alive
-        while not p.is_alive():
-          pass
+        while True:
+          if master_in.poll(0.25):
+            message = master_in.recv()
+            if message[0] == "S":
+              break
+            else:
+              master_out.send(message)
         time.sleep(0.25)
       else:
         dprint("node " + node_index + "is still alive")

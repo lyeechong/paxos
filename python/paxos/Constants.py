@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+const_debug = False
 
 def constant(f):
   def fset(self, value):
@@ -74,6 +75,9 @@ class _Const(object):
   @constant
   def LEADER_TIMEOUT():
     return 250 #milliseconds
+  @constant
+  def CLIENT():
+    return "CLIENT_CONSTANT_WOOT_WOOT"
 
   ### MASTER TO CLIENT ###
   @constant

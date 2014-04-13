@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from Constants import CONST
+from Constants import CONST, const_debug
 import Queue
 import sys
 import time
@@ -9,7 +9,7 @@ currentTimeMillis = lambda: int(round(time.time() * 1000))
 
 class Server():
   def __init__(self, client_index, pipe_in, clients_out, servers_out, master_out):
-    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
+    self.debug_on = const_debug # whether the print messages we use for debugging are printed. Turn this off when we submit
 
 
     self.index = client_index
@@ -51,6 +51,7 @@ class Server():
     '''
     if self.debug_on:
       print "SERVER "+" ".join(map(str, args))
+      sys.stdout.flush()
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
