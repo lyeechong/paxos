@@ -151,7 +151,7 @@ class Server():
       spot_request = args[1]
       (server_index, ballot_num, requested_spot) = spot_request
       msg = ()
-      if self.update_competing_ballots(spot_request):
+      if self.update_competing_ballots(spot_request) and not requested_spot in self.decided.keys(): 
         msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.ACK, self.index, spot_request)
       else:
         msg = (CONST.ACCEPTOR, CONST.PREPARE, CONST.NACK, self.index, spot_request)
@@ -161,7 +161,7 @@ class Server():
       spot_request = args[1]
       (server_index, ballot_num, requested_spot) = spot_request
       msg = ()
-      if self.update_competing_ballots(spot_request):
+      if self.update_competing_ballots(spot_request) and not requested_spot in self.decided.keys():
         msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.ACK, self.index, spot_request)
       else:
         msg = (CONST.ACCEPTOR, CONST.ACCEPT, CONST.NACK, self.index, spot_request)

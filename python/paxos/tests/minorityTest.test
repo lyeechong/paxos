@@ -1,0 +1,8 @@
+start 3 2
+crashServer 0
+sendMessage 0 hi there
+allClear
+crashServer 1
+sendMessage 1 this should not show up
+allClear
+printChatLog 0
