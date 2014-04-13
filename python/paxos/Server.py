@@ -2,6 +2,7 @@
 
 from Constants import CONST
 import Queue
+import sys
 import time
 
 currentTimeMillis = lambda: int(round(time.time() * 1000))
@@ -54,14 +55,20 @@ class Server():
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
+    if CONST.HEARTBEAT != message[0]:
+      self.check_timebomb()
     self.server_out[server_index].send(message)
 
   def broadcast_clients(self, message):
     for c_out in self.client_out:
+      if CONST.HEARTBEAT != message[0]:
+        self.check_timebomb()
       c_out.send(message)
 
   def broadcast_servers(self, message):
     for i in range(len(self.server_out)):
+      if CONST.HEARTBEAT != message[0]:
+        self.check_timebomb()
       self.send_server(i, message)
 
   def queueMessage(self, tag, message):
@@ -244,9 +251,9 @@ class Server():
     self.timebomb_counter = requested_countdown # timebomb counter
     self.dprint("timebomb with value of " + str(requested_countdown) + " now is active!")
     assert self.timebomb_active
-    assert self.timebomb_counter = requested_countdown
+    assert self.timebomb_counter == requested_countdown
     
-  def check_timebomb(self)
+  def check_timebomb(self):
     '''
     Should be called everytime we send a non-heartbeat message.
     Checks if a timebomb is active, and if it is, decrement the counter.
@@ -256,16 +263,17 @@ class Server():
     self.timebomb_counter = self.timebomb_counter - 1
     if self.timebomb_counter <= 0:
       # boom!
-      dprint("timebomb exploding!")
-      self.timebom_active = False
+      self.dprint("timebomb exploding!")
+      self.timebomb_active = False
       self.crash_self()
 
-  def crash_self()
+  def crash_self(self):
     '''
     "Crashes" this server by killing itself (the thread)
     '''
-    dprint("server is crashing itself! BOOM")
-    #### TODO
+    self.dprint("server is crashing itself! BOOM")
+    sys.exit(0)
+    assert false, "SHOULD NOT HAVE REACHED THIS. SERVER SHOULD BE VERY DEAD"
 
   def run(self):
     self.dprint("hello! This server is now running!")
