@@ -32,6 +32,7 @@ class Server():
 
     self.server_alive = {}
     
+    self.current_spot_request = None # the current spot request
     self.current_proposal_waiting_for_acks = False # whether we're waiting for acks/nacks    
     self.current_proposal_time = -1 # the time we sent out the proposal. Used to check for timeout for nacks/acks
     
@@ -91,7 +92,9 @@ class Server():
     ballot_number = self.get_ballot_num() # grab a ballot number to create a new ballot
     proposed_spot = self.get_free_spot()
     self.current_proposal_waiting_for_acks = True
+    self.current_proposal_time = currentTimeMillis()    
     spot_request = (self.index, ballot_number, proposed_spot) # formerly called server_tag
+    self.current_spot_request = spot_request
     self.proposals[spot_request] =  {CONST.CLIENT_TAG: _client_tag,
                                     CONST.MESSAGE: msg,
                                     CONST.PREP_MAJORITY: False,
@@ -204,7 +207,7 @@ class Server():
           self.dprint("got all the promises for" + str(this_proposal[CONST.MESSAGE]))
           this_proposal[CONST.PREP_MAJORITY] = True
           msg = (CONST.PROPOSER, CONST.ACCEPT, spot_request, this_proposal[CONST.MESSAGE])
-          self.current_proposal_time = currentTimeMillis
+          self.current_proposal_waiting_for_acks = False
           self.broadcast_servers(msg)
       elif response == CONST.NACK:
         #TODO
@@ -238,11 +241,12 @@ class Server():
     '''
     if self.is_paxosing and self.current_proposal_waiting_for_acks: # only need to check if we're paxosing and currently waiting for acks
       dTime = currentTimeMillis() - self.current_proposal_time
-      if dTime > CONST.TIMEOUT * 2: # I suppose 1 second is long enough
+      if dTime > CONST.TIMEOUT: # I suppose 1 second is long enough
         self.dprint("timed out on the current proposal's acks/nacks!")
+        self.abort_paxos(self.current_spot_request)
 
   def abort_paxos(self, spot_request):
-    this_proposal = self.proposal[spot_request]
+    this_proposal = self.proposals[spot_request]
     self.messageQueue.insert(0, (this_proposal[CONST.CLIENT_TAG], this_proposal[CONST.MESSAGE]))
     self.is_paxosing = False
     

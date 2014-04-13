@@ -124,7 +124,7 @@ if __name__ == "__main__":
         #clear out the pipe
         while server_in[node_index].poll():
           server_in[node_index].recv()
-          server_out[node_index].send(CONST.MASTER, CONST.RESTART)
+          server_out[node_index].send((CONST.MASTER, CONST.RESTART))
         p.start()
         #block until it is alive
         while not p.is_alive():
@@ -144,6 +144,7 @@ if __name__ == "__main__":
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER, num_messages))
 
   ### FINISH CLEANING UP ###
+  '''
   for pipe in server_in:
     pipe.close()
   for pipe in server_out:
@@ -162,6 +163,6 @@ if __name__ == "__main__":
   for p in clients:
     if p.is_alive():
       p.terminate()
-
+  '''
 else:
   dprint("something went horribly wrong")
