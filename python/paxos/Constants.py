@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-const_debug = False
+const_debug = True
 
 def constant(f):
   def fset(self, value):
@@ -23,6 +23,12 @@ class _Const(object):
   @constant
   def RESTART():
     return "RESTART_CONSTANT"
+  @constant
+  def ALL_CLEAR_REQ(): #used to request an allClear
+    return "ALL_CLEAR_REQ_CONSTANT"
+  @constant
+  def ALL_CLEAR_REPLY(): #used to reply to an allClearReq message from Master
+    return "ALL_CLEAR_REPLY_CONSTANT"
 
   ### SERVER CONSTANTS ###
   @constant
@@ -86,9 +92,6 @@ class _Const(object):
     return "CLIENT_CONSTANT_WOOT_WOOT"
 
   ### MASTER TO CLIENT ###
-  @constant
-  def ALL_CLEAR():
-    return "ALL_CLEAR_CONSTANT"
   @constant
   def SKIP_SLOTS():
     return "SKIP_SLOTS_CONSTANT"
