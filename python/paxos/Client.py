@@ -17,7 +17,7 @@ class Client():
     self.leader_index = 0
     self.leader_time = currentTimeMillis()
     self.LC = 0 # lamport clock
-    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
+    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
     self.received_tags = set()
     self.messages_sent = {}
     self.chat_log = {}
@@ -28,7 +28,7 @@ class Client():
     More useful for debugging.
     '''
     if self.debug_on:
-      print "Client " + str(self.index) + ": " + str(string)
+      print "CLIENT " + str(self.index) + ": " + str(string)
 
   def check_leader_and_modify(self):
     dTime = currentTimeMillis() - self.leader_time

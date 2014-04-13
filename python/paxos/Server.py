@@ -31,7 +31,7 @@ class Server():
 
     self.server_alive = {}
     
-    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
+    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
     
     currentTime = currentTimeMillis()
     
@@ -47,7 +47,7 @@ class Server():
     More useful for debugging.
     '''
     if self.debug_on:
-      print "Server " + str(self.index) + ": " + str(string)
+      print "SERVER " + str(self.index) + ": " + str(string)
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
