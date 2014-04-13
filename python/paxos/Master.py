@@ -122,9 +122,12 @@ if __name__ == "__main__":
         p = mp.Process( target = start_server, args = (node_index, server_in[node_index], client_out, server_out, master_out,))
         nodes[node_index] = p
         #clear out the pipe
+
         while server_in[node_index].poll():
           server_in[node_index].recv()
-          server_out[node_index].send((CONST.MASTER, CONST.RESTART))
+        server_out[node_index].send((CONST.MASTER, CONST.RESTART))
+
+        #restart the process
         p.start()
         #block until it is alive
         while not p.is_alive():

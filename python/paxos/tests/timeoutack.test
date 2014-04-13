@@ -4,6 +4,5 @@ crashServer 0
 crashServer 1
 restartServer 0
 restartServer 1
-restartServer 1
-restartServer 1
-restartServer 1
+sendMessage 0 maserati
+printChatLog 0
