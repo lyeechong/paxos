@@ -144,7 +144,7 @@ if __name__ == "__main__":
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER, num_messages))
 
   ### FINISH CLEANING UP ###
-  '''
+  
   for pipe in server_in:
     pipe.close()
   for pipe in server_out:
@@ -163,6 +163,6 @@ if __name__ == "__main__":
   for p in clients:
     if p.is_alive():
       p.terminate()
-  '''
+  
 else:
   dprint("something went horribly wrong")
