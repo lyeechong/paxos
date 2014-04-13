@@ -8,7 +8,7 @@ from Client import start_client
 from Server import start_server
 from Constants import CONST
 
-debug_on = False # if this is true, the debug messages are printed. Turn off before submitting
+debug_on = True # if this is true, the debug messages are printed. Turn off before submitting
 
 def dprint(*args):
   '''
@@ -130,11 +130,13 @@ if __name__ == "__main__":
       if not currentNode.is_alive():
         p = mp.Process( target = start_server, args = (node_index, server_in[node_index], client_out, server_out, master_out,))
         nodes[node_index] = p
-
         #clear out the pipe
+
         while server_in[node_index].poll():
           server_in[node_index].recv()
-        server_out[node_index].send(CONST.MASTER, CONST.RESTART)
+        server_out[node_index].send((CONST.MASTER, CONST.RESTART))
+
+        #restart the process
         p.start()
         #block until it is alive
         while not p.is_alive():
@@ -154,6 +156,7 @@ if __name__ == "__main__":
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER, num_messages))
 
   ### FINISH CLEANING UP ###
+  
   for pipe in server_in:
     pipe.close()
   for pipe in server_out:
@@ -172,6 +175,6 @@ if __name__ == "__main__":
   for p in clients:
     if p.is_alive():
       p.terminate()
-
+  
 else:
   dprint("something went horribly wrong")

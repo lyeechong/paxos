@@ -19,6 +19,9 @@ class _Const(object):
   @constant
   def TIMEOUT():
     return 500
+  @constant
+  def RESTART():
+    return "RESTART_CONSTANT"
 
   ### SERVER CONSTANTS ###
   @constant

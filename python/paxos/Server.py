@@ -9,7 +9,7 @@ currentTimeMillis = lambda: int(round(time.time() * 1000))
 
 class Server():
   def __init__(self, client_index, pipe_in, clients_out, servers_out, master_out):
-    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
+    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
 
 
     self.index = client_index
@@ -34,6 +34,10 @@ class Server():
     self.isLearning = False # huh??
 
     self.server_alive = {}
+    
+    self.current_spot_request = None # the current spot request
+    self.current_proposal_waiting_for_acks = False # whether we're waiting for acks/nacks    
+    self.current_proposal_time = -1 # the time we sent out the proposal. Used to check for timeout for nacks/acks
     
     self.timebomb_active = False # whether the timebomb is active
     self.timebomb_counter = -1 # timebomb counter
@@ -88,7 +92,10 @@ class Server():
     self.dprint("begin paxosing for message " + str(_client_tag) + str(msg))
     ballot_number = self.get_ballot_num() # grab a ballot number to create a new ballot
     proposed_spot = self.get_free_spot()
+    self.current_proposal_waiting_for_acks = True
+    self.current_proposal_time = currentTimeMillis()    
     spot_request = (self.index, ballot_number, proposed_spot) # formerly called server_tag
+    self.current_spot_request = spot_request
     self.proposals[spot_request] =  {CONST.CLIENT_TAG: _client_tag,
                                     CONST.MESSAGE: msg,
                                     CONST.PREP_MAJORITY: False,
@@ -201,6 +208,7 @@ class Server():
           self.dprint("got all the promises for" + str(this_proposal[CONST.MESSAGE]))
           this_proposal[CONST.PREP_MAJORITY] = True
           msg = (CONST.PROPOSER, CONST.ACCEPT, spot_request, this_proposal[CONST.MESSAGE])
+          self.current_proposal_waiting_for_acks = False
           self.broadcast_servers(msg)
       elif response == CONST.NACK:
         #TODO
@@ -215,6 +223,7 @@ class Server():
       if response == CONST.ACK:
         this_proposal[CONST.ACCEPT_ACK].add(accept_index)
       if len(this_proposal[CONST.ACCEPT_ACK]) > self.num_nodes/2 and not this_proposal[CONST.ACCEPT_MAJORITY]:
+        self.current_proposal_waiting_for_acks = False
         self.dprint("got all the accepts for" + str(this_proposal[CONST.MESSAGE]))       
         this_proposal[CONST.ACCEPT_MAJORITY] = True
         # PROPOSER, DECIDE, SPOT_REQUEST, MESSAGE, CLIENT_INDEX
@@ -223,11 +232,22 @@ class Server():
       elif response == CONST.NACK:
         #TODO
         #any nacks should abort and prepend the proposal to the begining of message queue
+        self.current_proposal_waiting_for_acks = False
         self.dprint("abort! got nack")
         self.abort_paxos(spot_request)
+        
+  def check_ack_timeout(self):
+    '''
+    Check if we've been waiting too long for acks/nacks to come back for a proposal
+    '''
+    if self.is_paxosing and self.current_proposal_waiting_for_acks: # only need to check if we're paxosing and currently waiting for acks
+      dTime = currentTimeMillis() - self.current_proposal_time
+      if dTime > CONST.TIMEOUT * 3: # I suppose 1 second is long enough
+        self.dprint("timed out on the current proposal's acks/nacks!")
+        self.abort_paxos(self.current_spot_request)
 
   def abort_paxos(self, spot_request):
-    this_proposal = self.proposal[spot_request]
+    this_proposal = self.proposals[spot_request]
     self.messageQueue.insert(0, (this_proposal[CONST.CLIENT_TAG], this_proposal[CONST.MESSAGE]))
     self.is_paxosing = False
     
@@ -264,6 +284,8 @@ class Server():
     while True:
       if self.is_leader:
         self.broadcast_clients((CONST.HEARTBEAT, self.index))
+        self.check_ack_timeout()
+      
       #for i in range(self.num_nodes):
       #  if i != self.index:
       #    self.server_out[i].send((CONST.HEARTBEAT, self.index))
