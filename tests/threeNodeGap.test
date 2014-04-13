@@ -4,7 +4,7 @@ sendMessage 0 hello1
 skipSlots 1
 sendMessage 0 hello3
 allClear
-killServer 0
+crashServer 0
 sendMessage 0 hello4
 allClear
 printChatLog 0
