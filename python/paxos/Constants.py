@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-const_debug = True
+const_debug = False
 
 def constant(f):
   def fset(self, value):
@@ -19,7 +19,7 @@ class _Const(object):
     return 0
   @constant
   def TIMEOUT():
-    return 500
+    return 500 #MS
   @constant
   def RESTART():
     return "RESTART_CONSTANT"

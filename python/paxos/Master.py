@@ -103,39 +103,35 @@ if __name__ == "__main__":
           come to consensus in PAXOS do, and that all clients have heard
           of them """
       dprint("sending all clear req to all clients")
-      for client in client_out:
-        client.send((CONST.MASTER, CONST.ALL_CLEAR_REQ))
-      dprint("sending all clear req to all servers")
-      dprint("send all of the all clear reqs.. now waiting for all the all clear replies")
-      # block until we get messages back from everyone that we're okay
-      waiting = True
-      client_reply_count = 0
-      total_num_messages_in_limbo = 0
-      while waiting:
-        if master_in.poll():
-          message = master_in.recv()
-          num_messages_in_limbo = message[2] # not doing anything with this as of right now
-          if message[0] == CONST.CLIENT and message[1] == CONST.ALL_CLEAR_REPLY:
-            client_reply_count += 1
-            total_num_messages_in_limbo += num_messages_in_limbo
-          else:
-            # toss it back into the pipe
-            master_out.send(message)
-        if client_reply_count == num_clients:
-          waiting = False
-      #determine if there is a majority
+
       server_alive_count = 0
       for p in nodes:
         if p.is_alive():
           server_alive_count += 1
       if server_alive_count > num_nodes/2:
-        # we do have a majority, so wait a bit longer!
-        dprint("majority detected, wait a little longer for the all clear!")
-        time.sleep(CONST.TIMEOUT/1000.0)
+        # we do have a majority, so poll clients!
+        dprint("majority detected, wait for the all clear from clients!")
+        dprint("sending all clear req to all servers")
+        for client in client_out:
+          client.send((CONST.MASTER, CONST.ALL_CLEAR_REQ))
+        dprint("send all of the all clear reqs.. now waiting for all the all clear replies")
+        client_reply = set()
+        while True:
+          if master_in.poll(0.25):
+            message = master_in.recv()
+            if message[0] == CONST.CLIENT and message[1] == CONST.ALL_CLEAR_REPLY:
+              client_index = message[2]
+              client_reply.add(client_index)
+              dprint(client_reply, len(client_reply), num_clients)
+              if len(client_reply) == num_clients:
+                dprint("breaking out")
+                break
+          else:
+            master_out.send(message)
       else:
         # we don't have a majority alive.. just return
         dprint("not a majority of servers alive for all clear, just return")
-        pass
+        time.sleep(0.25)
         
     if line[0] == 'crashServer':
       node_index = int(line[1])
