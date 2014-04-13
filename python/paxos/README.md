@@ -25,4 +25,4 @@ sendMessage - `(SEND, tag = <client_index, client_LC> , msg)`
 - Deal with Nacks/Restarting proposals after people die
 - Learned messages
 - Timeouts on prepare/accept
-- All clear command needs to be done in Master
+- All clear command needs to be done in Master!
