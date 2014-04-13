@@ -27,9 +27,12 @@ class Server():
     self.highest_competing_ballot_value = {} # a mapping of slot number to the highest ballot number which has been proposed (we don't need to store the actual proposal message)
 
     self.learned_messages = {} # is this used??
-    self.isLearning = False # huh?
+    self.isLearning = False # huh??
 
     self.server_alive = {}
+    
+    self.timebomb_active = False # whether the timebomb is active
+    self.timebomb_counter = -1 # timebomb counter
     
     self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
     
@@ -229,6 +232,40 @@ class Server():
     this_proposal = self.proposal[spot_request]
     self.messageQueue.insert(0, (this_proposal[CONST.CLIENT_TAG], this_proposal[CONST.MESSAGE]))
     self.is_paxosing = False
+    
+  def deal_with_timebomb(self, args):
+    '''
+    handles a timebomb request, setting the current_timebomb_countdown to the appropriate value
+    '''
+    requested_countdown = args[0]
+    self.dprint("timebomb received with a value of: " + str(requested_countdown))
+    assert self.is_leader, "got a timebomb but this server isn't the leader!"
+    self.timebomb_active = True
+    self.timebomb_counter = requested_countdown # timebomb counter
+    self.dprint("timebomb with value of " + str(requested_countdown) + " now is active!")
+    assert self.timebomb_active
+    assert self.timebomb_counter = requested_countdown
+    
+  def check_timebomb(self)
+    '''
+    Should be called everytime we send a non-heartbeat message.
+    Checks if a timebomb is active, and if it is, decrement the counter.
+    '''
+    assert self.is_leader, "this server has a timebomb but isn't the leader"
+    self.dprint("timebomb on this server being decremented from " + str(self.timebomb_counter) + " to " + str(self.timebomb_counter))
+    self.timebomb_counter = self.timebomb_counter - 1
+    if self.timebomb_counter <= 0:
+      # boom!
+      dprint("timebomb exploding!")
+      self.timebom_active = False
+      self.crash_self()
+
+  def crash_self()
+    '''
+    "Crashes" this server by killing itself (the thread)
+    '''
+    dprint("server is crashing itself! BOOM")
+    #### TODO
 
   def run(self):
     self.dprint("hello! This server is now running!")
@@ -246,6 +283,7 @@ class Server():
         if message[0] == CONST.ASSIGN_LEADER:
           self.is_leader = True
           self.dprint("I am the leader!")
+          assert self.is_leader
         elif message[0] == CONST.HEARTBEAT:
           self.update_servers_heartbeat(message[1])
         elif message[0] == CONST.SEND:
@@ -253,6 +291,8 @@ class Server():
           self.queueMessage(message[1], message[2])
         elif message[0] == CONST.SKIP_SLOTS:
           pass
+        elif message[0] == CONST.TIME_BOMB_LEADER:
+          self.deal_with_timebomb(message[1:])
         elif message[0] == CONST.PROPOSER:
           self.from_proposer(message[1:])
         elif message[0] == CONST.ACCEPTOR:
@@ -261,6 +301,7 @@ class Server():
       ''' check to see if there is a waiting proposal from a client in the queue
       and that this server is currently  not in paxos mode. If so, begin paxos on that message '''
       if not self.is_paxosing and len(self.messageQueue) > 0:
+        assert self.is_leader, "wanted to start paxosing but this server isn't the leader"
         message_to_propose = self.messageQueue.pop(0)
         self.is_paxosing = True
         self.start_paxos(message_to_propose)

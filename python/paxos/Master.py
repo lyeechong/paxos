@@ -96,8 +96,8 @@ if __name__ == "__main__":
       """ Ensure that this blocks until all messages that are going to 
           come to consensus in PAXOS do, and that all clients have heard
           of them """
-      ## TODO
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.ALL_CLEAR))
+      # TODO block until we get messages back from everyone that we're okay
       time.sleep(5)
     if line[0] == 'crashServer':
       node_index = int(line[1])
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         dprint("we crashed server" + str(node_index))
       else:
         dprint(str(node_index) + "already_dead")
-      time.sleep(.25)
+      time.sleep(0.25)
     if line[0] == 'restartServer':
       node_index = int(line[1])
       """ Restart the server specified by node_index """
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         #block until it is alive
         while not p.is_alive():
           pass
-        time.sleep(.25)
+        time.sleep(0.25)
       else:
         dprint("node " + node_index + "is still alive")
           
@@ -142,7 +142,7 @@ if __name__ == "__main__":
       num_messages = int(line[1])
       """ Instruct the leader to crash after sending the number of paxos
           related messages specified by num_messages """
-      clients_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER))
+      client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.TIME_BOMB_LEADER, num_messages))
   dprint("end")
 else:
   dprint("something went horribly wrong")

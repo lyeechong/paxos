@@ -82,9 +82,11 @@ class Client():
         self.send_message(CONST.NOOP)
     elif current == CONST.ALL_CLEAR:
       #all_clear
+      #TODO
       pass
     elif current == CONST.TIME_BOMB_LEADER:
-      #time_bomb_leader
+      num_messages = commands[1]
+      self.server_out[self.leader_index].send((CONST.TIME_BOMB_LEADER, num_messages)) #timebomb the leader
       pass
     else:
       self.dprint ("unhandled command " + current)
