@@ -242,8 +242,9 @@ class Server():
     '''
     if self.is_paxosing and self.current_proposal_waiting_for_acks: # only need to check if we're paxosing and currently waiting for acks
       dTime = currentTimeMillis() - self.current_proposal_time
-      if dTime > CONST.TIMEOUT * 3: # I suppose 1 second is long enough
+      if dTime > CONST.TIMEOUT * 4: # I suppose 1 second is long enough
         self.dprint("timed out on the current proposal's acks/nacks!")
+        self.current_proposal_waiting_for_acks = False
         self.abort_paxos(self.current_spot_request)
 
   def abort_paxos(self, spot_request):
