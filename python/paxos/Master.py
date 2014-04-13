@@ -147,11 +147,14 @@ if __name__ == "__main__":
         #restart the process
         p.start()
         #block until it is alive
-        while True:
+        cur_count = 0
+        while cur_count !=2:
           if master_in.poll(0.25):
             message = master_in.recv()
             if message[0] == "S":
-              break
+              cur_count += 1
+            elif message[0] == CONST.SERVER and message[1] == CONST.ACK:
+              cur_count +=1
             else:
               master_out.send(message)
         time.sleep(0.25)

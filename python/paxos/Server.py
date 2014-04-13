@@ -30,10 +30,7 @@ class Server():
     
     self.highest_competing_ballot_value = {} # a mapping of slot number to the highest ballot number which has been proposed (we don't need to store the actual proposal message)
 
-    self.learned_messages = {} # is this used??
     self.isLearning = False # huh??
-
-    self.server_alive = {}
     
     self.current_spot_request = None # the current spot request
     self.current_proposal_waiting_for_acks = False # whether we're waiting for acks/nacks    
@@ -72,16 +69,6 @@ class Server():
     tagged_message = (tag, message)
     self.messageQueue.append(tagged_message)
 
-  def update_servers_heartbeat(self, server_index):
-    self.server_alive[server_index] = currentTimeMillis()
-  
-  def update_servers_alive(self):
-    current_time = currentTimeMillis()
-    for server_index, last_time in self.server_alive.items():
-      if current_time - last_time > CONST.TIMEOUT:
-        del self.server_alive[server_index]
-        self.dprint(server_index + "dead")
-
   def start_paxos(self, tagged_message):
     '''
     starts "paxosing" for a specific message a client wants
@@ -100,10 +87,8 @@ class Server():
                                     CONST.MESSAGE: msg,
                                     CONST.PREP_MAJORITY: False,
                                     CONST.PREP_ACCEPT: set(),
-                                    CONST.PREP_NACK: set(),
                                     CONST.ACCEPT_MAJORITY: False,
-                                    CONST.ACCEPT_ACK: set(),
-                                    CONST.ACCEPT_NACK: set()}
+                                    CONST.ACCEPT_ACK: set()}
     self.current_proposal_time = currentTimeMillis()    
     #PREPARE()
     self.broadcast_servers((CONST.PROPOSER, CONST.PREPARE, spot_request))
@@ -236,6 +221,22 @@ class Server():
         self.current_proposal_waiting_for_acks = False
         self.dprint("abort! got nack")
         self.abort_paxos(spot_request)
+
+  def from_learner(self, args):
+    self.dprint("from_learner", args)
+    command = args[0]
+    if command == CONST.REVIVED:
+      requesting_server_index = args[1]
+      msg = (CONST.LEARNER, CONST.ACK, self.decided)
+      self.send_server(requesting_server_index, msg)
+    elif command == CONST.ACK:
+      if self.isLearning:
+        decided_set = args[1]
+        self.dprint("We learned this:", decided_set)
+        #union the two dictionaries
+        self.decided = dict(self.decided.items() + decided_set.items())
+        self.master_out.send((CONST.SERVER, CONST.ACK))
+        self.isLearning = False
         
   def check_ack_timeout(self):
     '''
@@ -298,11 +299,14 @@ class Server():
         if message[0] == CONST.ASSIGN_LEADER:
           self.is_leader = True
           self.dprint("I am the leader!")
-          assert self.is_leader
-        elif message[0] == CONST.HEARTBEAT:
-          self.update_servers_heartbeat(message[1])
+        elif message[0] == CONST.MASTER and message[1] == CONST.RESTART:
+          self.dprint("I just restarted.")
+          msg = (CONST.LEARNER, CONST.REVIVED, self.index)
+          self.isLearning = True
+          self.broadcast_servers(msg)
         elif message[0] == CONST.SEND:
           #(CONST.SEND, tag, message)
+          self.is_leader = True
           self.queueMessage(message[1], message[2])
         elif message[0] == CONST.SKIP_SLOTS:
           pass
@@ -312,6 +316,8 @@ class Server():
           self.from_proposer(message[1:])
         elif message[0] == CONST.ACCEPTOR:
           self.from_acceptor(message[1:])
+        elif message[0] == CONST.LEARNER:
+          self.from_learner(message[1:])
 
       ''' check to see if there is a waiting proposal from a client in the queue
       and that this server is currently  not in paxos mode. If so, begin paxos on that message '''

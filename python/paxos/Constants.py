@@ -26,6 +26,9 @@ class _Const(object):
 
   ### SERVER CONSTANTS ###
   @constant
+  def SERVER():
+    return "SERVER_CONSTANT_123"
+  @constant
   def PROPOSER():
     return "PROPOSER_CONSTANT_123"
   @constant
@@ -40,6 +43,9 @@ class _Const(object):
   @constant
   def NACK():
     return "NACK_CONSTANT_456"
+  @constant
+  def REVIVED():
+    return "REVIVED_CONSTANT"
 
   ### PROPOSER CONSTANTS ###
   @constant
