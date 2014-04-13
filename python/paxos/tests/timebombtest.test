@@ -1,3 +1,5 @@
 start 3 2
 timeBombLeader 2
 sendMessage 0 vroomvroom
+allClear
+printChatLog 0

@@ -8,6 +8,8 @@ currentTimeMillis = lambda: int(round(time.time() * 1000))
 
 class Client():
   def __init__(self, client_index, pipe_in, clients_out, servers_out, master_out):
+    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
+
     self.index = client_index
     self.conn = pipe_in
     self.client_out = clients_out
@@ -17,18 +19,17 @@ class Client():
     self.leader_index = 0
     self.leader_time = currentTimeMillis()
     self.LC = 0 # lamport clock
-    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
     self.received_tags = set()
     self.messages_sent = {}
     self.chat_log = {}
   
-  def dprint(self, string):
+  def dprint(self, *args):
     '''
     Prepends the client's number before the string to be printed.
     More useful for debugging.
     '''
     if self.debug_on:
-      print "CLIENT " + str(self.index) + ": " + str(string)
+      print "CLIENT "+" ".join(map(str, args))
 
   def check_leader_and_modify(self):
     dTime = currentTimeMillis() - self.leader_time

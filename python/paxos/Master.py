@@ -3,20 +3,21 @@ import multiprocessing as mp
 import fileinput
 import string
 import time
+import sys
 from Client import start_client
 from Server import start_server
 from Constants import CONST
 
-debug_on = True # if this is true, the debug messages are printed. Turn off before submitting
+debug_on = False # if this is true, the debug messages are printed. Turn off before submitting
 
-def dprint(string):
+def dprint(*args):
   '''
   Print for the debug statements.
   Prepends "Master: " before all the strings.
   Can be turned off by settings the debug_on flag to False.
   '''
   if debug_on:
-    print "MASTER: " + str(string)
+    print "MASTER "+" ".join(map(str, args))
 
 dprint("starting Master!")
 
@@ -73,12 +74,16 @@ if __name__ == "__main__":
             server_ack.add(message[1])
           elif message[0] == "C":
             client_ack.add(message[1])
+          else:
+            #put it back in the queue
+            master_out.send(message)
         if len(server_ack) == num_nodes and len(client_ack) == num_clients:
           break
 
           
     if line[0] == 'sendMessage':
       client_index = int(line[1])
+      assert client_index >= 0 and client_index < num_clients, "Invalid Client Index:"+str(client_index)
       message = string.join(line[2::])
       """ Instruct the client specified by client_index to send the message
           to the proper paxos node """
@@ -87,6 +92,7 @@ if __name__ == "__main__":
 
     if line[0] == 'printChatLog':
       client_index = int(line[1])
+      assert client_index >= 0 and client_index < num_clients, "Invalid Client Index:"+str(client_index)
       """ Print out the client specified by client_index's chat history
           in the format described on the handout """
       dprint("client: " + str(client_index) + "printChatLog")
@@ -97,10 +103,12 @@ if __name__ == "__main__":
           come to consensus in PAXOS do, and that all clients have heard
           of them """
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.ALL_CLEAR))
+      dprint("ALL_CLEAR")
       # TODO block until we get messages back from everyone that we're okay
       time.sleep(5)
     if line[0] == 'crashServer':
       node_index = int(line[1])
+      assert node_index >= 0 and node_index < num_nodes, "Invalid Server Index:"+str(node_index)
       """ Immediately crash the server specified by node_index """
       currentNode = nodes[node_index]
       dprint("crashing Server " + str(node_index))
@@ -115,6 +123,7 @@ if __name__ == "__main__":
       time.sleep(0.25)
     if line[0] == 'restartServer':
       node_index = int(line[1])
+      assert node_index >= 0 and node_index < num_nodes, "Invalid Server Index:"+str(node_index)
       """ Restart the server specified by node_index """
       dprint("restarting server" + str(node_index))
       currentNode = nodes[node_index]
@@ -125,7 +134,7 @@ if __name__ == "__main__":
         #clear out the pipe
         while server_in[node_index].poll():
           server_in[node_index].recv()
-          server_out[node_index].send(CONST.MASTER, CONST.RESTART)
+        server_out[node_index].send(CONST.MASTER, CONST.RESTART)
         p.start()
         #block until it is alive
         while not p.is_alive():

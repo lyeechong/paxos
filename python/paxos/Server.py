@@ -9,6 +9,9 @@ currentTimeMillis = lambda: int(round(time.time() * 1000))
 
 class Server():
   def __init__(self, client_index, pipe_in, clients_out, servers_out, master_out):
+    self.debug_on = False # whether the print messages we use for debugging are printed. Turn this off when we submit
+
+
     self.index = client_index
     self.conn = pipe_in
     self.client_out = clients_out
@@ -35,17 +38,15 @@ class Server():
     self.timebomb_active = False # whether the timebomb is active
     self.timebomb_counter = -1 # timebomb counter
     
-    self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
-    
     self.decided = {} # mapping of spot numbers to messages
     
-  def dprint(self, string):
+  def dprint(self, *args):
     '''
     Prepends the server's number before the string to be printed.
     More useful for debugging.
     '''
     if self.debug_on:
-      print "SERVER " + str(self.index) + ": " + str(string)
+      print "SERVER "+" ".join(map(str, args))
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
