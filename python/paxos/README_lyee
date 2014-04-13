@@ -13,4 +13,26 @@ Overall design:
 Details on how we implemented the commands:
 
 start [servers] [clients]
-  The Master process spawns ...
+  The Master process spawns a process for each server and client and creates 
+  Pipes for each of them.
+
+sendMessage [index] [message]
+  TODO
+  
+crashServer [index]
+  TODO
+  
+restartServer [index]
+  TODO
+  
+allClear
+  TODO
+  
+timeBombLeader [numMsg]
+  TODO
+  
+skipSlots [numSlots]
+  TODO
+  
+printChatLog [index]
+  TODO
