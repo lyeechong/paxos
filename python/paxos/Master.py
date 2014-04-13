@@ -23,6 +23,7 @@ def dprint(*args):
 dprint("starting Master!")
 
 if __name__ == "__main__":
+
   nodes, clients, = [], []
   num_nodes, num_clients = 0, 0
   server_in = []
@@ -31,6 +32,35 @@ if __name__ == "__main__":
   client_out = []
   master_in = None
   master_out = None
+
+  def all_clear():
+    server_alive_count = 0
+    for p in nodes:
+      if p.is_alive():
+        server_alive_count += 1
+    if server_alive_count > num_nodes/2:
+      # we do have a majority, so poll clients!
+      dprint("majority detected, wait for the all clear from clients!")
+      dprint("sending all clear req to all servers")
+      for client in client_out:
+        client.send((CONST.MASTER, CONST.ALL_CLEAR_REQ))
+      dprint("send all of the all clear reqs.. now waiting for all the all clear replies")
+      client_reply = set()
+      while True:
+        if master_in.poll(0.25):
+          message = master_in.recv()
+          if message[0] == CONST.CLIENT and message[1] == CONST.ALL_CLEAR_REPLY:
+            client_index = message[2]
+            client_reply.add(client_index)
+            dprint(client_reply, len(client_reply), num_clients)
+            if len(client_reply) == num_clients:
+              dprint("breaking out")
+              break
+          else:
+            master_out.send(message)
+    else:
+      # we don't have a majority alive.. just return
+      dprint("not a majority of servers alive for all clear, just return")
   
   for raw_line in fileinput.input():
     line = raw_line.split();    
@@ -97,41 +127,15 @@ if __name__ == "__main__":
             break
           else: 
             master_out.send(message)
+      time.sleep(0.25)
 
     if line[0] == 'allClear':
       """ Ensure that this blocks until all messages that are going to 
           come to consensus in PAXOS do, and that all clients have heard
           of them """
       dprint("sending all clear req to all clients")
-
-      server_alive_count = 0
-      for p in nodes:
-        if p.is_alive():
-          server_alive_count += 1
-      if server_alive_count > num_nodes/2:
-        # we do have a majority, so poll clients!
-        dprint("majority detected, wait for the all clear from clients!")
-        dprint("sending all clear req to all servers")
-        for client in client_out:
-          client.send((CONST.MASTER, CONST.ALL_CLEAR_REQ))
-        dprint("send all of the all clear reqs.. now waiting for all the all clear replies")
-        client_reply = set()
-        while True:
-          if master_in.poll(0.25):
-            message = master_in.recv()
-            if message[0] == CONST.CLIENT and message[1] == CONST.ALL_CLEAR_REPLY:
-              client_index = message[2]
-              client_reply.add(client_index)
-              dprint(client_reply, len(client_reply), num_clients)
-              if len(client_reply) == num_clients:
-                dprint("breaking out")
-                break
-          else:
-            master_out.send(message)
-      else:
-        # we don't have a majority alive.. just return
-        dprint("not a majority of servers alive for all clear, just return")
-        time.sleep(0.25)
+      all_clear()
+      time.sleep(0.25)
         
     if line[0] == 'crashServer':
       node_index = int(line[1])
@@ -175,14 +179,25 @@ if __name__ == "__main__":
               cur_count +=1
             else:
               master_out.send(message)
-        time.sleep(0.25)
       else:
         dprint("node " + node_index + "is still alive")
+      time.sleep(0.25)
           
     if line[0] == 'skipSlots':
       amount_to_skip = int(line[1])
       """ Instruct the leader to skip slots in the chat message sequence """
+      all_clear()
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.SKIP_SLOTS, amount_to_skip))
+      dprint("skipping slots")
+      while True:
+        if master_in.poll(0.25):
+          message = master_in.recv()
+          dprint(message)
+          if message == (CONST.SERVER, CONST.SKIP_SLOTS, CONST.ACK):
+            break
+          else:
+            master_out.send(message)
+      time.sleep(0.25)
       
     if line[0] == 'timeBombLeader':
       num_messages = int(line[1])

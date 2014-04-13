@@ -97,16 +97,13 @@ class Server():
     '''
     finds the next free spot a message can fit in (based off the current set of decided values) and returns it
     '''
-    """
-    temp = self.decided.keys()
-    temp.sort()
+    temp = sorted(self.decided.keys())
     if not temp:
       # the mapping is empty!
       return 0
     else:
       return temp[-1] + 1 # this is the next free spot since we're skipping the skipped slots    
-    """
-    return len(self.decided)
+    
   def get_ballot_num(self):
     '''
     returns the next ballot number of this server
@@ -283,6 +280,14 @@ class Server():
       sys.exit(0)
       assert false, "SHOULD NOT HAVE REACHED THIS. SERVER SHOULD BE VERY DEAD"
 
+  def deal_with_skip_slots(self, num_to_skip):
+    for i in range(num_to_skip):
+      spot = self.get_free_spot()
+      self.decided[spot] = (CONST.NOOP)
+    msg = (CONST.SERVER, CONST.SKIP_SLOTS, CONST.ACK)
+    self.master_out.send(msg)
+    
+    
   def run(self):
     self.dprint("hello! This server is now running!")
     self.master_out.send(("S", self.index)) # ack the master
@@ -302,10 +307,13 @@ class Server():
           self.is_leader = True
           self.dprint("I am the leader!")
         elif message[0] == CONST.MASTER and message[1] == CONST.RESTART:
-          self.dprint("I just restarted.")
-          msg = (CONST.LEARNER, CONST.REVIVED, self.index)
-          self.isLearning = True
-          self.broadcast_servers(msg)
+            self.dprint("I just restarted.")
+            msg = (CONST.LEARNER, CONST.REVIVED, self.index)
+            self.isLearning = True
+            self.broadcast_servers(msg)
+        elif message[0] == CONST.CLIENT and message[1] == CONST.SKIP_SLOTS:
+            num_slots_to_skip = message[2]
+            self.deal_with_skip_slots(num_slots_to_skip)
         elif message[0] == CONST.SEND:
           self.is_leader = True
           #(CONST.SEND, tag, message)

@@ -94,8 +94,10 @@ class Client():
     elif current == CONST.SKIP_SLOTS:
       #send skip slots to master
       num_slots = commands[1]
-      for i in range(num_slots):
-        self.send_message(CONST.NOOP)
+      #for i in range(num_slots):
+      #  self.send_message(CONST.NOOP)
+      msg = ((CONST.CLIENT, CONST.SKIP_SLOTS, num_slots))
+      self.server_out[self.leader_index].send(msg)
     elif current == CONST.ALL_CLEAR_REQ:
       self.all_clear_checking = True #Start checking to see if all messages are sent
     elif current == CONST.TIME_BOMB_LEADER:
