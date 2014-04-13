@@ -17,7 +17,7 @@ def dprint(*args):
   Can be turned off by settings the debug_on flag to False.
   '''
   if debug_on:
-    print "MASTER "+" ".join(map(str, args))
+    print "MASTER " + " ".join(map(str, args))
     sys.stdout.flush()
 
 dprint("starting Master!")
@@ -33,10 +33,8 @@ if __name__ == "__main__":
   master_out = None
   
   for raw_line in fileinput.input():
-    line = raw_line.split();
-    
-    dprint("executing: " + raw_line)
-    
+    line = raw_line.split();    
+    dprint("executing: " + raw_line)    
     if line[0] == 'start':
       num_nodes = int(line[1])
       num_clients = int(line[2])
@@ -47,24 +45,19 @@ if __name__ == "__main__":
         cout, cin = mp.Pipe()
         client_out.append(cout)
         client_in.append(cin)
-
       for i in range(num_nodes):
         sout, sin = mp.Pipe()
         server_out.append(sout)
         server_in.append(sin)
-
       master_out, master_in = mp.Pipe()
-
       for i in range(num_clients):
         p = mp.Process(target = start_client, args = (i, client_in[i], client_out, server_out, master_out,))
         clients.append(p)
         p.start()
-
       for i in range(num_nodes):
         p = mp.Process( target = start_server, args = (i, server_in[i], client_out, server_out, master_out,))
         nodes.append(p)
-        p.start()
-      
+        p.start()      
       server_ack = set()
       client_ack = set()
       # Wait for Acks from servers and clients starting
@@ -80,8 +73,7 @@ if __name__ == "__main__":
             master_out.send(message)
         if len(server_ack) == num_nodes and len(client_ack) == num_clients:
           break
-
-          
+            
     if line[0] == 'sendMessage':
       client_index = int(line[1])
       assert client_index >= 0 and client_index < num_clients, "Invalid Client Index:"+str(client_index)
@@ -110,10 +102,41 @@ if __name__ == "__main__":
       """ Ensure that this blocks until all messages that are going to 
           come to consensus in PAXOS do, and that all clients have heard
           of them """
-      client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.ALL_CLEAR))
-      dprint("ALL_CLEAR")
-      # TODO block until we get messages back from everyone that we're okay
-      time.sleep(5)
+      dprint("sending all clear req to all clients")
+      for client in client_out:
+        client.send((CONST.MASTER, CONST.ALL_CLEAR_REQ))
+      dprint("sending all clear req to all servers")
+      dprint("send all of the all clear reqs.. now waiting for all the all clear replies")
+      # block until we get messages back from everyone that we're okay
+      waiting = True
+      client_reply_count = 0
+      total_num_messages_in_limbo = 0
+      while waiting:
+        if master_in.poll():
+          message = master_in.recv()
+          num_messages_in_limbo = message[2] # not doing anything with this as of right now
+          if message[0] == CONST.CLIENT and message[1] == CONST.ALL_CLEAR_REPLY:
+            client_reply_count += 1
+            total_num_messages_in_limbo += num_messages_in_limbo
+          else:
+            # toss it back into the pipe
+            master_out.send(message)
+        if client_reply_count == num_clients:
+          waiting = False
+      #determine if there is a majority
+      server_alive_count = 0
+      for p in nodes:
+        if p.is_alive():
+          server_alive_count += 1
+      if server_alive_count > num_nodes/2:
+        # we do have a majority, so wait a bit longer!
+        dprint("majority detected, wait a little longer for the all clear!")
+        time.sleep(CONST.TIMEOUT/1000.0)
+      else:
+        # we don't have a majority alive.. just return
+        dprint("not a majority of servers alive for all clear, just return")
+        pass
+        
     if line[0] == 'crashServer':
       node_index = int(line[1])
       assert node_index >= 0 and node_index < num_nodes, "Invalid Server Index:"+str(node_index)
@@ -129,6 +152,7 @@ if __name__ == "__main__":
       else:
         dprint(str(node_index) + "already_dead")
       time.sleep(0.25)
+      
     if line[0] == 'restartServer':
       node_index = int(line[1])
       assert node_index >= 0 and node_index < num_nodes, "Invalid Server Index:"+str(node_index)
@@ -139,11 +163,9 @@ if __name__ == "__main__":
         p = mp.Process( target = start_server, args = (node_index, server_in[node_index], client_out, server_out, master_out,))
         nodes[node_index] = p
         #clear out the pipe
-
         while server_in[node_index].poll():
           server_in[node_index].recv()
         server_out[node_index].send((CONST.MASTER, CONST.RESTART))
-
         #restart the process
         p.start()
         #block until it is alive
@@ -162,6 +184,7 @@ if __name__ == "__main__":
       amount_to_skip = int(line[1])
       """ Instruct the leader to skip slots in the chat message sequence """
       client_out[CONST.DIST_CLIENT_INDEX].send((CONST.MASTER, CONST.SKIP_SLOTS, amount_to_skip))
+      
     if line[0] == 'timeBombLeader':
       num_messages = int(line[1])
       """ Instruct the leader to crash after sending the number of paxos

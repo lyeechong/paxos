@@ -22,6 +22,9 @@ class Client():
     self.received_tags = set()
     self.messages_sent = {}
     self.chat_log = {}
+    
+    self.all_clear_checking = False
+    self.all_clear_start_time = 0
   
   def dprint(self, *args):
     '''
@@ -29,7 +32,7 @@ class Client():
     More useful for debugging.
     '''
     if self.debug_on:
-      print "CLIENT "+" ".join(map(str, args))
+      print "CLIENT " + str(self.index) + " ".join(map(str, args))
       sys.stdout.flush()
 
   def check_leader_and_modify(self):
@@ -65,6 +68,7 @@ class Client():
   def send_message(self, message):
     tag = (self.index, self.LC)
     self.LC += 1
+    self.dprint("sending message to leader proposer: " + str(message))
     self.server_out[self.leader_index].send((CONST.SEND, tag, message))
     self.messages_sent[tag] = message
 
@@ -92,22 +96,45 @@ class Client():
       num_slots = commands[1]
       for i in range(num_slots):
         self.send_message(CONST.NOOP)
-    elif current == CONST.ALL_CLEAR:
-      #all_clear
-      #TODO
-      pass
+    elif current == CONST.ALL_CLEAR_REQ:
+      self.begin_all_clear_check()
+      assert self.all_clear_checking == True, "all clear checking flag not set"
     elif current == CONST.TIME_BOMB_LEADER:
+      assert self.index == 0, "timebombing when not the distinguished client"
       num_messages = commands[1]
       self.server_out[self.leader_index].send((CONST.TIME_BOMB_LEADER, num_messages)) #timebomb the leader
-      pass
     else:
-      self.dprint ("unhandled command " + current)
+      assert False, "invalid command"
+        
+  def begin_all_clear_check(self):
+    '''
+    Begins the all clear check.
+    '''
+    self.all_clear_checking = True
+    self.all_clear_start_time = currentTimeMillis()
+    
+  def perfom_time_check_for_all_clear(self):
+    '''
+    This should be called with each iteration of the while loop.
+    Check to see if the time has passed and if it has, send back an ALL_CLEAR_REPLY to Master
+    and also set the all_clear_checking flag to False.
+    '''
+    if self.all_clear_checking == True:
+      dTime = currentTimeMillis() - self.all_clear_start_time
+      unsent = set(self.messages_sent.keys()).difference(self.received_tags)
+      if dTime > CONST.TIMEOUT * 2 or len(unsent) == 0: # wait for people to die, etc
+        #issue an ALL_CLEAR_REPLY to Master
+        self.dprint("issuing all clear reply to Master and mentioning there are " + str(len(unsent)) + " messages which will be reproposed")
+        self.master_out.send((CONST.CLIENT, CONST.ALL_CLEAR_REPLY, self.index, len(unsent)))
+        #turn the flag off
+        self.all_clear_checking = False
 
   def run(self):
     self.dprint( "hello from Client " + str(self.index))
     self.master_out.send(("C", self.index)) #ack the master
     self.server_out[self.leader_index].send((CONST.ASSIGN_LEADER,)) #tell the leader he's the leader
     while True:
+      self.perfom_time_check_for_all_clear()
       if self.conn.poll():
         message = self.conn.recv()
         if message[0] == CONST.MASTER:

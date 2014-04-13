@@ -50,7 +50,7 @@ class Server():
     More useful for debugging.
     '''
     if self.debug_on:
-      print "SERVER "+" ".join(map(str, args))
+      print "SERVER " + str(self.index) + " ".join(map(str, args))
       sys.stdout.flush()
 
   # we can use this to take care of time bombs
@@ -194,6 +194,8 @@ class Server():
         msg = (CONST.DECIDED_SET, (self.proposals[spot_request][CONST.CLIENT_TAG], requested_spot, self.decided[requested_spot]))
         self.broadcast_clients(msg)
         self.is_paxosing = False
+    else:
+      assert False, "invalid command!"
 
   def from_acceptor(self, args):
     self.dprint("from acceptor: " + str(args))
@@ -212,7 +214,6 @@ class Server():
           self.current_proposal_waiting_for_acks = False
           self.broadcast_servers(msg)
       elif response == CONST.NACK:
-        #TODO
         #any nacks should abort and prepend the proposal to the beginning of message queue
         self.dprint("abort! got nack")
         self.abort_paxos(spot_request)
@@ -231,19 +232,20 @@ class Server():
         msg = (CONST.PROPOSER, CONST.DECIDE, spot_request, this_proposal[CONST.MESSAGE], this_proposal[CONST.CLIENT_TAG][0])
         self.broadcast_servers(msg)
       elif response == CONST.NACK:
-        #TODO
         #any nacks should abort and prepend the proposal to the begining of message queue
         self.current_proposal_waiting_for_acks = False
         self.dprint("abort! got nack")
         self.abort_paxos(spot_request)
-        
+    else:
+      assert False, "invalid command!"
+
   def check_ack_timeout(self):
     '''
     Check if we've been waiting too long for acks/nacks to come back for a proposal
     '''
     if self.is_paxosing and self.current_proposal_waiting_for_acks: # only need to check if we're paxosing and currently waiting for acks
       dTime = currentTimeMillis() - self.current_proposal_time
-      if dTime > CONST.TIMEOUT * 4: # I suppose 1 second is long enough
+      if dTime > CONST.TIMEOUT * 2: # I suppose 1 second is long enough
         self.dprint("timed out on the current proposal's acks/nacks!")
         self.current_proposal_waiting_for_acks = False
         self.abort_paxos(self.current_spot_request)
