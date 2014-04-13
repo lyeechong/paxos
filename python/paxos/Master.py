@@ -123,9 +123,9 @@ if __name__ == "__main__":
         nodes[node_index] = p
 
         #clear out the pipe
-        #while server_in[node_index].poll():
-        #  server_in[node_index].recv()
-        #  server_out[node_index].send(CONST.MASTER, CONST.RESTART)
+        while server_in[node_index].poll():
+          server_in[node_index].recv()
+          server_out[node_index].send(CONST.MASTER, CONST.RESTART)
         p.start()
         #block until it is alive
         while not p.is_alive():

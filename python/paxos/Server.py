@@ -37,12 +37,6 @@ class Server():
     
     self.debug_on = True # whether the print messages we use for debugging are printed. Turn this off when we submit
     
-    currentTime = currentTimeMillis()
-    
-    for i in range(self.num_nodes):
-      self.server_alive[i] = currentTime
-    self.learned_from = set()
-    
     self.decided = {} # mapping of spot numbers to messages
     
   def dprint(self, string):
@@ -55,20 +49,16 @@ class Server():
 
   # we can use this to take care of time bombs
   def send_server(self, server_index, message):
-    if CONST.HEARTBEAT != message[0]:
-      self.check_timebomb()
     self.server_out[server_index].send(message)
+    if self.timebomb_active:
+      self.check_timebomb()
 
   def broadcast_clients(self, message):
     for c_out in self.client_out:
-      if CONST.HEARTBEAT != message[0]:
-        self.check_timebomb()
       c_out.send(message)
 
   def broadcast_servers(self, message):
     for i in range(len(self.server_out)):
-      if CONST.HEARTBEAT != message[0]:
-        self.check_timebomb()
       self.send_server(i, message)
 
   def queueMessage(self, tag, message):
@@ -259,21 +249,13 @@ class Server():
     Checks if a timebomb is active, and if it is, decrement the counter.
     '''
     assert self.is_leader, "this server has a timebomb but isn't the leader"
-    self.dprint("timebomb on this server being decremented from " + str(self.timebomb_counter) + " to " + str(self.timebomb_counter))
-    self.timebomb_counter = self.timebomb_counter - 1
+    self.dprint("timebomb on this server being decremented from " + str(self.timebomb_counter) + " to " + str(self.timebomb_counter-1))
+    self.timebomb_counter -= 1
     if self.timebomb_counter <= 0:
       # boom!
       self.dprint("timebomb exploding!")
-      self.timebomb_active = False
-      self.crash_self()
-
-  def crash_self(self):
-    '''
-    "Crashes" this server by killing itself (the thread)
-    '''
-    self.dprint("server is crashing itself! BOOM")
-    sys.exit(0)
-    assert false, "SHOULD NOT HAVE REACHED THIS. SERVER SHOULD BE VERY DEAD"
+      sys.exit(0)
+      assert false, "SHOULD NOT HAVE REACHED THIS. SERVER SHOULD BE VERY DEAD"
 
   def run(self):
     self.dprint("hello! This server is now running!")
