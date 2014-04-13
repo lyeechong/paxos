@@ -1,0 +1,13 @@
+start 3 2
+sendMessage 0 msg1
+allClear
+crashServer 0
+allClear
+sendMessage 1 msg2
+restartServer 0
+sendMessage 0 msg2
+sendMessage 0 msg3
+sendMessage 0 msg4
+allClear
+printChatLog 0
+printChatLog 1
