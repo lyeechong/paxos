@@ -27,4 +27,4 @@ sendMessage - `(SEND, tag = <client_index, client_LC> , msg)`
 - ~~Timeouts on prepare/accept~~
 - All clear command needs to be done in Master!
 - cleaning up printChatLog
-- blocking when printing the chatlog
+- ~~blocking when printing the chatlog~~
