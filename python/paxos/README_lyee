@@ -1,0 +1,16 @@
+UT EID: lsc568
+CS ID: lchong
+
+Overall design:
+  We used Python 2.7.3 as our language of choice.
+  We a process for each of the clients and servers. For IPC, we used Pipes in
+  the multiprocessing package.
+  Each server has all three roles of proposer, learner and acceptor.
+  We used the view-change model, and the clients elect a leader by sending
+  messages to it. A server know that it is the leader if it is receiving
+  messages from clients.
+
+Details on how we implemented the commands:
+
+start [servers] [clients]
+  The Master process spawns ...
