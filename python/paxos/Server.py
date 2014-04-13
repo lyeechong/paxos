@@ -302,6 +302,7 @@ class Server():
         elif message[0] == CONST.HEARTBEAT:
           self.update_servers_heartbeat(message[1])
         elif message[0] == CONST.SEND:
+          self.is_leader = True
           #(CONST.SEND, tag, message)
           self.queueMessage(message[1], message[2])
         elif message[0] == CONST.SKIP_SLOTS:
