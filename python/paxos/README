@@ -1,0 +1,80 @@
+#---------------------------------------------------------------------------////
+# Paxos project for CS371D
+# Team-buddies: Lyee Chong and Matt Lau
+#---------------------------------------------------------------------------////
+
+Matt Lau
+UTEID: mjl2334
+CSID:  mjlau
+
+Lyee Chong
+UTEID: lsc568
+CSID:  lchong
+
+Example command to run threeNodeGap.test:
+python Master.py < threeNodeGap.test
+
+#---------------------------------------------------------------------------////
+# Overall design
+#---------------------------------------------------------------------------////
+  We used Python 2.7.3 as our language of choice.
+  We a process for each of the clients and servers. For IPC, we used Pipes in
+  the multiprocessing package.
+  Each server has all three roles of proposer, learner and acceptor.
+  We used the view-change model, and the clients elect a leader by sending
+  messages to it. A server know that it is the leader if it is receiving
+  messages from clients.
+
+#---------------------------------------------------------------------------////
+# Details on how we implemented the commands
+#---------------------------------------------------------------------------////
+
+start [servers] [clients]
+  The Master process spawns a process for each server and client and creates 
+  Pipes for each of them.
+
+sendMessage [index] [message]
+  The Master asks the specified client to send a message proposal to the current
+  leader. The leader server then checks its decided set to determine the slot to
+  propose. The leader then sends the slot with a ballot number to all other
+  acceptors. The other acceptors then receive the prepare message and promise
+  if there are no other ballots with a number more than the received ballot
+  number for that slot. Otherwise they send back a reject message. If the leader
+  receives too many rejects, it tries again with a higher ballot number. If the
+  leader instead gets a majority of promises, it issues an accept request to all
+  acceptors. The acceptors then accept if there hasn't been a higher ballot and
+  sends back ack. Otherwise they send back nack. Upon a majority of acks, the
+  leader decides on the message, otherwise the leader aborts.
+  
+crashServer [index]
+  The Master performs a terminate on the relevant server process.
+  
+restartServer [index]
+  The Master restarts a server process by creating a new server process with the
+  same arguments as the original one. The restarted server then learns messages
+  from the other learners and updates its own decided set.
+  
+allClear
+  The Master first checks to see if a majority of servers are still alive.
+  If there are not, then it returns. If there are still a majority alive, it 
+  sends an allClearRequest to all of the clients. The clients then check to see
+  if there are any messages which are still going through the Paxos protocol. If
+  there are, they block until the messages are finished and send back an
+  allClearReply to the Master. When the Master receives an allClearReply from all
+  of the clients, the command returns.
+  
+timeBombLeader [numMsg]
+  The Master sends a timeBombRequest to a client. The client then identifies who
+  is the current leader and forwards the timeBombRequest to the leader. The
+  leader then sets a timer local variable and countsdown with each message it
+  sends which is not a heartbeat. When the timer hits zero, it kills itself with
+  sys.exit(0).
+  
+skipSlots [numSlots]
+  The leader gets the skipSlots command and logically marks the numSlots amount
+  of slots in his decision set as "taken".
+  
+printChatLog [index]
+  The Master sends a printChatLog request to the client specified and blocks
+  until the client sends back a reply saying it is finished printing the chat
+  log.
